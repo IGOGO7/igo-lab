@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#040507" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>人类300年交易进化史 · 竖屏纪录片</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+  :root {
+    --bg: #08090C;
+    --paper: #F4F0E6;
+    --muted: #9AA0AA;
+    --gold: #C9A84C;
+    --gold-dim: rgba(201, 168, 76, 0.28);
+    --line: rgba(244, 240, 230, 0.14);
+    --cyan: #56B4D3;
+    --red: #D9534F;
+    --green: #48A868;
+  }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #040507; color: var(--paper);
+    font-family: "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+    overscroll-behavior: none;
+  }
+
+  /* ==================================================================
+     Stage：手机满屏 / 桌面居中 9:16 画幅
+     --s 为由 JS 计算的等比缩放，所有字号都以 --s 为基准
+     ================================================================== */
+  #stage {
+    --s: 1;
+    --fs-xs: calc(11.5px * var(--s));
+    --fs-sm: calc(12.5px * var(--s));
+    --fs-md: calc(14.5px * var(--s));
+    --fs-lg: calc(21px * var(--s));
+    --fs-xl: calc(29px * var(--s));
+    --pad-x: calc(18px * var(--s));
+    --pad-top: max(76px, calc(74px * var(--s)));
+    --pad-bottom: calc(148px * var(--s));
+    position: relative;
+    width: 100%; height: 100vh; height: 100dvh;
+    background: var(--bg);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  @media (min-width: 560px) {
+    #stage {
+      width: min(92vw, calc(92vh * 9 / 16));
+      width: min(92vw, calc(92dvh * 9 / 16));
+      height: auto;
+      aspect-ratio: 9 / 16;
+      max-height: 92vh; max-height: 92dvh;
+      border-radius: 10px;
+      box-shadow: 0 0 0 1px rgba(201, 168, 76, 0.35), 0 30px 90px rgba(0, 0, 0, 0.95);
+    }
+    #frameNote { display: block; }
+  }
+  /* 桌面端画幅外的说明，手机端不显示 */
+  #frameNote {
+    display: none;
+    position: fixed; left: 50%; bottom: 9px; transform: translateX(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: 0.6px; color: rgba(244, 240, 230, 0.38);
+    white-space: nowrap; pointer-events: none;
+  }
+
+  /* 胶片颗粒 + 暗角 */
+  .film-grain {
+    position: absolute; inset: 0; pointer-events: none; z-index: 30; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .vignette {
+    position: absolute; inset: 0; pointer-events: none; z-index: 29;
+    background: radial-gradient(circle at 50% 45%, transparent 54%, rgba(0, 0, 0, 0.76) 100%);
+  }
+  /* 建筑细线画框 + 四角十字 */
+  .arch-frame {
+    position: absolute; inset: calc(10px * var(--s)) calc(10px * var(--s)) calc(146px * var(--s)) calc(10px * var(--s));
+    pointer-events: none; z-index: 28;
+    border: 0.5px solid var(--line);
+  }
+  .xhair { position: absolute; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--gold); opacity: 0.6; line-height: 1; }
+  .xhair.tl { top: -7px; left: -4px; }
+  .xhair.tr { top: -7px; right: -4px; }
+  .xhair.bl { bottom: -7px; left: -4px; }
+  .xhair.br { bottom: -7px; right: -4px; }
+
+  /* ============================ 顶部 HUD ============================ */
+  #hud {
+    position: absolute;
+    top: calc(10px + env(safe-area-inset-top, 0px));
+    left: calc(12px * var(--s)); right: calc(12px * var(--s)); z-index: 40;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  body.clean-mode #hud,
+  body.clean-mode #rail,
+  body.clean-mode #safeHint { opacity: 0 !important; pointer-events: none !important; }
+
+  .hud-grp { display: flex; align-items: center; gap: 4px; }
+  .hbtn {
+    background: rgba(12, 14, 19, 0.86); color: var(--paper);
+    border: 0.5px solid rgba(244, 240, 230, 0.24);
+    padding: 6px 8px; min-height: 32px;
+    font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.3px;
+    font-family: inherit; white-space: nowrap;
+    cursor: pointer; backdrop-filter: blur(8px);
+    transition: border-color 0.2s, color 0.2s, transform 0.1s;
+  }
+  .hbtn:active { transform: scale(0.94); }
+  .hbtn.gold { border-color: var(--gold); color: var(--gold); }
+  .hbtn.icon { padding: 6px 7px; font-size: 12px; }
+
+  /* 16 段细线进度条 */
+  #rail {
+    position: absolute;
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    left: calc(14px * var(--s)); right: calc(14px * var(--s)); z-index: 38;
+    display: flex; gap: 3px; transition: opacity 0.25s ease;
+  }
+  .seg {
+    position: relative; flex: 1; height: calc(3px * var(--s));
+    background: rgba(244, 240, 230, 0.16); cursor: pointer;
+    transition: background 0.25s, transform 0.2s;
+  }
+  .seg::after { content: ""; position: absolute; left: 0; right: 0; top: -9px; bottom: -9px; }
+  .seg.done { background: rgba(201, 168, 76, 0.55); }
+  .seg.active { background: var(--gold); transform: scaleY(1.7); }
+
+  /* ==================== 第一层：星座图 + 激光束 ==================== */
+  #spaceLayer { position: absolute; inset: 0; z-index: 10; overflow: hidden; touch-action: none; transition: opacity 0.45s ease; }
+  #camera {
+    position: absolute; top: 0; left: 0; width: 720px; height: 1120px;
+    transform-origin: 0 0; will-change: transform;
+  }
+  .c-node {
+    position: absolute; width: 160px; padding: 7px 9px;
+    background: rgba(10, 12, 16, 0.94); border: 0.5px solid rgba(201, 168, 76, 0.38);
+    cursor: pointer; transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  }
+  .c-node.active {
+    border-color: var(--gold); transform: scale(1.07);
+    box-shadow: 0 0 22px rgba(201, 168, 76, 0.35);
+  }
+  @keyframes beamFlow { to { stroke-dashoffset: -24; } }
+  .laser-beam { stroke-dasharray: 7 5; animation: beamFlow 0.45s linear infinite; }
+
+  /* ================= 第二层：开场钩子 / 全屏特写 ================= */
+  #closeupLayer {
+    position: absolute; inset: 0; z-index: 20;
+    padding: calc(var(--pad-top) + env(safe-area-inset-top, 0px)) var(--pad-x) calc(var(--pad-bottom) + env(safe-area-inset-bottom, 0px));
+    background: radial-gradient(circle at 50% 42%, rgba(12, 14, 19, 0.975), rgba(6, 7, 10, 0.995));
+    transition: opacity 0.32s ease, transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow: hidden;
+  }
+  #closeupLayer.away { opacity: 0; transform: scale(0.86); pointer-events: none; }
+  #closeupLayer.here { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+  .act-body {
+    height: 100%; display: flex; flex-direction: column;
+    justify-content: space-between; gap: calc(10px * var(--s));
+    position: relative; z-index: 2;
+  }
+  .watermark-year {
+    position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: calc(126px * var(--s)); font-weight: 700; letter-spacing: -4px;
+    color: rgba(201, 168, 76, 0.06); pointer-events: none; user-select: none;
+    white-space: nowrap;
+  }
+
+  /* 文字样式（全部随 --s 缩放） */
+  .kicker {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-xs); letter-spacing: 1.3px; color: var(--gold);
+  }
+  .h1-hook { font-size: var(--fs-xl); font-weight: 800; line-height: 1.42; color: var(--paper); letter-spacing: -0.2px; }
+  .h1-hook em { color: var(--gold); font-style: normal; }
+  .meta-line { font-size: var(--fs-sm); color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .yr-big {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: calc(25px * var(--s)); font-weight: 800; color: var(--gold);
+    line-height: 1; letter-spacing: -0.5px;
+  }
+  .h2-thesis { font-size: var(--fs-lg); font-weight: 800; color: var(--paper); line-height: 1.2; }
+  .body-txt { font-size: var(--fs-md); line-height: 1.55; color: var(--paper); }
+  .body-txt.dim { color: #D8D3C6; }
+  .tag-gold, .tag-cyan {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.2px;
+  }
+  .tag-gold { color: var(--gold); }
+  .tag-cyan { color: var(--cyan); }
+  .head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .title-row { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+  .era-rail {
+    display: flex; flex-wrap: wrap; gap: calc(6px * var(--s)) calc(10px * var(--s));
+    margin-top: calc(14px * var(--s));
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: calc(10.5px * var(--s)); letter-spacing: 0.3px;
+    color: rgba(244, 240, 230, 0.5);
+  }
+  .era-rail span { position: relative; padding-left: calc(9px * var(--s)); }
+  .era-rail span::before {
+    content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 3px;
+    margin-top: -1.5px; background: var(--gold); opacity: 0.75;
+  }
+  .caption-block { display: flex; flex-direction: column; gap: calc(9px * var(--s)); border-top: 0.5px solid var(--line); padding-top: calc(10px * var(--s)); }
+
+  /* 示意图容器：吃掉剩余高度，SVG 保持 360:176 比例居中 */
+  .schem-wrap { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: calc(4px * var(--s)) 0; }
+  .schematic {
+    width: 100%; height: auto; max-height: 100%; display: block;
+    border: 0.5px solid rgba(244, 240, 230, 0.2);
+    background: rgba(10, 12, 16, 0.92);
+  }
+
+  /* 开场 / 换幕动画 */
+  @keyframes docIn {
+    0% { opacity: 0; transform: translateY(12px) scale(1.03); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .doc-enter { animation: docIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+  @keyframes drawStroke { to { stroke-dashoffset: 0; } }
+  .draw-line { stroke-dasharray: 640; stroke-dashoffset: 640; animation: drawStroke 1.15s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  @keyframes goldPulse { 0%, 100% { r: 4; opacity: 1; } 50% { r: 9; opacity: 0.25; } }
+  .gold-beacon { animation: goldPulse 1.3s ease-in-out infinite; }
+
+  /* 倒计时环 */
+  .ring-wrap { position: relative; width: calc(42px * var(--s)); height: calc(42px * var(--s)); flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  #ringSec { position: absolute; font-family: ui-monospace, Menlo, monospace; font-size: calc(10px * var(--s)); color: var(--paper); }
+
+  /* ========================= 第三幕：年鉴卡 ========================= */
+  #finaleCard {
+    position: absolute; top: calc(72px * var(--s) + env(safe-area-inset-top, 0px));
+    left: calc(14px * var(--s)); right: calc(14px * var(--s)); z-index: 25;
+    padding: calc(11px * var(--s)) calc(14px * var(--s));
+    background: rgba(8, 9, 12, 0.93); border: 0.5px solid var(--gold);
+    backdrop-filter: blur(10px); display: none;
+  }
+  #finaleCard.show { display: block; animation: docIn 0.45s ease forwards; }
+  #finaleCard .fc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; gap: 8px; }
+  #finaleCard .fc-top span { font-size: calc(10px * var(--s)); font-family: ui-monospace, Menlo, monospace; }
+  #finaleCard .fc-main { font-size: calc(15px * var(--s)); font-weight: 700; line-height: 1.45; color: var(--paper); }
+  #finaleCard .fc-main em { color: var(--gold); font-style: normal; }
+
+  /* 抖音底部遮挡区提示 */
+  #safeHint {
+    position: absolute; left: calc(10px * var(--s)); right: calc(10px * var(--s));
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    height: calc(132px * var(--s)); z-index: 35;
+    border: 0.5px dashed rgba(244, 240, 230, 0.18);
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+    pointer-events: none; transition: opacity 0.25s ease;
+  }
+  #safeHint span {
+    font-size: calc(10.5px * var(--s)); color: rgba(244, 240, 230, 0.45);
+    font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.5px; text-align: center; line-height: 1.5;
+  }
+  #toast {
+    position: absolute; top: calc(76px * var(--s) + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+    z-index: 50; background: rgba(8, 9, 12, 0.95); border: 0.5px solid var(--gold); color: var(--gold);
+    padding: 6px 13px; font-size: var(--fs-xs); letter-spacing: 0.4px; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+
+  /* 极矮屏（≤ 640px 高）进一步压缩留白 */
+  @media (max-height: 660px) {
+    #stage { --pad-top: max(72px, calc(66px * var(--s))); --pad-bottom: calc(126px * var(--s)); }
+    #safeHint { height: calc(112px * var(--s)); }
+  }
+</style>
+</head>
+<body>
+<main id="stage">
+  <div class="film-grain"></div>
+  <div class="vignette"></div>
+  <div class="arch-frame">
+    <span class="xhair tl">+</span><span class="xhair tr">+</span>
+    <span class="xhair bl">+</span><span class="xhair br">+</span>
+  </div>
+
+  <header id="hud">
+    <div class="hud-grp">
+      <button id="bPlay" class="hbtn gold" type="button" aria-label="播放或暂停">暂停</button>
+      <button id="bPrev" class="hbtn" type="button" aria-label="上一幕">上一幕</button>
+      <button id="bNext" class="hbtn" type="button" aria-label="下一幕">下一幕</button>
+      <button id="bReplay" class="hbtn" type="button" aria-label="重播">重播</button>
+    </div>
+    <div class="hud-grp">
+      <button id="bSpeed" class="hbtn" type="button" aria-label="播放速度">1.0x</button>
+      <button id="bAudio" class="hbtn" type="button" aria-label="开关音效">音效</button>
+      <button id="bClean" class="hbtn gold" type="button" title="纯净录屏：隐藏全部控件" aria-label="纯净录屏">录屏</button>
+    </div>
+  </header>
+
+  <div id="rail"></div>
+
+  <section id="spaceLayer">
+    <div id="camera">
+      <svg width="720" height="1120" viewBox="0 0 720 1120" style="position:absolute;inset:0;pointer-events:none;">
+        <defs>
+          <filter id="goldGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.8" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <g id="edges"></g>
+        <g id="beams"></g>
+      </svg>
+      <div id="nodes"></div>
+    </div>
+  </section>
+
+  <section id="closeupLayer" class="here"></section>
+
+  <div id="finaleCard">
+    <div class="fc-top">
+      <span style="letter-spacing:1.1px;color:var(--gold);">FINAL ARCHIVE · 1755 — 2026</span>
+      <span style="color:var(--muted);">可拖拽 / 点节点回溯</span>
+    </div>
+    <div class="fc-main">三百年交易范式迭代，工具在变，<em>人性与流动性失衡永恒不变。</em></div>
+  </div>
+
+  <div id="safeHint">
+    <span>抖音底部遮挡区 · 点「录屏」隐藏全部控件</span>
+  </div>
+  <div id="toast">已进入纯净录屏模式 · 轻触屏幕恢复控件</div>
+</main>
+<div id="frameNote">9 : 16 竖屏画幅 · 建议录屏 1080 × 1920</div>
+
+<script>
+/* =========================================================================
+   1. 16 个交易理论的谱系数据与坐标
+   ========================================================================= */
+const DATA = [
+  { id: "sakata", yr: "1755", wm: "1755", tag: "东方实战源头", title: "酒田战法", who: "本间宗久 · 日本大阪堂岛米市",
+    p1: "首创四值K线(OHLC)与三山三川心理结构，阴极生阳捕捉情绪拐点。",
+    p2: "局部K线缺乏大周期趋势框架，催生西方「道氏理论」。",
+    parent: null, pos: { x: 70, y: 65 }, svg: "sakata" },
+  { id: "dow", yr: "1884", wm: "1884", tag: "西方技术鼻祖", title: "道氏理论", who: "查尔斯·道 (Charles Dow)",
+    p1: "将市场拆解为潮汐/波浪/涟漪三重运动，高低点抬高且需量价验证。",
+    p2: "趋势确认信号天然滞后，促使后人拆解量价、波浪与关键点。",
+    parent: "sakata", pos: { x: 285, y: 115 }, svg: "dow" },
+  { id: "bachelier", yr: "1900", wm: "1900", tag: "金融数学源头", title: "投机理论·随机游走", who: "路易·巴舍利耶 (Bachelier)",
+    p1: "首次用布朗运动刻画价格波动，价格扩散标准差与时间平方根成正比。",
+    p2: "奠定现代随机微积分基石，直接孕育「有效市场假说」。",
+    parent: "dow", pos: { x: 505, y: 95 }, svg: "bachelier" },
+  { id: "wyckoff", yr: "1920s", wm: "1923", tag: "量价微观学派", title: "威科夫方法", who: "理查德·威科夫 (Wyckoff)",
+    p1: "透过「复合人」视角识别吸筹派发周期，狙击 Spring 假跌破震仓。",
+    p2: "为精确量化各价位成交分布，进一步演化出「市场轮廓四度空间」。",
+    parent: "dow", pos: { x: 55, y: 295 }, svg: "wyckoff" },
+  { id: "livermore", yr: "1920s", wm: "1926", tag: "趋势动量学派", title: "利弗莫尔关键点", who: "杰西·利弗莫尔 (Jesse Livermore)",
+    p1: "沿最小阻力线在关键点(Pivot)试探突破，浮盈金字塔加码绝不摊平。",
+    p2: "高度依赖个人纪律与盘感，后人将其机械化为「海龟交易法则」。",
+    parent: "dow", pos: { x: 275, y: 275 }, svg: "livermore" },
+  { id: "elliott", yr: "1938", wm: "1938", tag: "波浪结构学派", title: "艾略特波浪理论", who: "拉尔夫·艾略特 (R.N. Elliott)",
+    p1: "市场群体情绪呈分形嵌套，完整周期由五浪推动与三浪调整构成。",
+    p2: "千人千浪主观性极强，促使实战派提炼更客观的「1-2-3反转法则」。",
+    parent: "dow", pos: { x: 485, y: 285 }, svg: "elliott" },
+  { id: "gann", yr: "1930s", wm: "1935", tag: "时空周期学派", title: "江恩时空理论", who: "威廉·江恩 (W.D. Gann)",
+    p1: "时间与价格存在几何角度共振，1×1甘氏平衡线决定多空生死结构。",
+    p2: "几何校准门槛极高，其时空临界点思想融入现代结构拐点交易。",
+    parent: "dow", pos: { x: 265, y: 435 }, svg: "gann" },
+  { id: "patterns", yr: "1948", wm: "1948", tag: "经典形态学派", title: "经典图表形态学", who: "爱德华兹 & 迈吉",
+    p1: "系统归纳头肩顶底、双顶底与三角形整理，颈线突破测算等幅目标。",
+    p2: "经典突破常遭主力假突破诱多，催生「维克多2B假突破法则」。",
+    parent: "elliott", pos: { x: 475, y: 455 }, svg: "patterns" },
+  { id: "emh", yr: "1970", wm: "1970", tag: "现代金融学派", title: "有效市场假说 EMH", who: "尤金·法玛 (Eugene Fama)",
+    p1: "资产价格已瞬时充分反映所有公开信息，历史图表无法持续超额套利。",
+    p2: "现实泡沫与崩盘频发，打破完全理性假设催生「行为金融学」。",
+    parent: "bachelier", pos: { x: 515, y: 615 }, svg: "emh" },
+  { id: "turtle", yr: "1983", wm: "1983", tag: "系统趋势学派", title: "海龟交易法则", who: "理查德·丹尼斯 (Richard Dennis)",
+    p1: "20日唐奇安通道机械突破入场，按ATR波动率动态分配1%风险头寸。",
+    p2: "四年狂赚1.75亿美元验证规则威力，成为现代CTA量化基金鼻祖。",
+    parent: "livermore", pos: { x: 265, y: 605 }, svg: "turtle" },
+  { id: "indicators", yr: "1978-80s", wm: "1978", tag: "量化指标学派", title: "现代技术指标 RSI/布林带", who: "威尔斯·怀尔德 & 约翰·布林格",
+    p1: "用数学公式量化动量超买超卖(RSI)与波动率标准差通道(±2σ)。",
+    p2: "单一指标在单边行情易钝化，随后演变为多因子模型的底层特征。",
+    parent: "livermore", pos: { x: 260, y: 765 }, svg: "indicators" },
+  { id: "behavioral", yr: "1979", wm: "1979", tag: "认知博弈学派", title: "行为金融学·前景理论", who: "卡尼曼 & 特沃斯基",
+    p1: "损失厌恶(亏损痛苦是盈利2.25倍)与羊群效应系统性打破理性人假设。",
+    p2: "精准解释散户「拿不住盈利、死扛亏损」，为量化提供行为Alpha。",
+    parent: "emh", pos: { x: 510, y: 785 }, svg: "behavioral" },
+  { id: "profile", yr: "1985", wm: "1985", tag: "双向拍卖理论", title: "市场轮廓·四度空间", who: "彼得·斯泰德迈尔 (Steidlmayer)",
+    p1: "市场是双向拍卖机制，用70%价值区(VA)与控制点(POC)识别均衡失衡。",
+    p2: "电子盘时代进一步穿透K线外壳，进化出逐笔成交「现代订单流」。",
+    parent: "wyckoff", pos: { x: 55, y: 635 }, svg: "profile" },
+  { id: "sperandeo", yr: "1991", wm: "1991", tag: "流动性猎杀派", title: "维克多 1-2-3 与 2B法则", who: "维克多·斯波朗迪 (Trader Vic)",
+    p1: "2B法则专抓刺破前高扫掉止损池后迅速跌回的假突破陷阱，小止损反转。",
+    p2: "揭示主力猎杀止损流动性的本质，直接衔接现代订单流微观结构。",
+    parent: "patterns", pos: { x: 455, y: 945 }, svg: "sperandeo" },
+  { id: "orderflow", yr: "2000s", wm: "2005", tag: "微观结构巅峰", title: "现代订单流 Footprint", who: "现代做市商与微观结构学派",
+    p1: "穿透K线透视买卖主动扫单失衡(Imbalance ≥300%)与Delta背离吸收。",
+    p2: "融合威科夫吸筹与双向拍卖，代表当代日内盘口微观博弈最高精度。",
+    parent: "profile", pos: { x: 60, y: 930 }, svg: "orderflow" },
+  { id: "quant", yr: "1988-2026", wm: "2026", tag: "算法帝国进化", title: "现代量化与统计套利", who: "爱德华·索普 & 吉姆·西蒙斯",
+    p1: "海量非相关因子挖掘、协整均值回归、凯利公式仓位与微秒级执行。",
+    p2: "汇聚三百年数学、行为金融与算力结晶，开启全自动算法博弈时代。",
+    parent: "turtle", pos: { x: 270, y: 965 }, svg: "quant" }
+];
+const MAP = Object.fromEntries(DATA.map(d => [d.id, d]));
+
+/* 节点在 720×1120 画布中的基准尺寸（用于连线与运镜中心） */
+const NODE_W = 160, NODE_H = 46;
+
+/* =========================================================================
+   2. 16 张手工矢量示意图（字号已按竖屏可读性放大）
+   ========================================================================= */
+function renderSchematic(type) {
+  const box = (caption, inner) => `
+    <svg class="schematic" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid meet">
+      <g stroke="rgba(244,240,230,0.06)" stroke-width="0.5">
+        <line x1="0" y1="60" x2="360" y2="60"/><line x1="0" y1="120" x2="360" y2="120"/><line x1="0" y1="180" x2="360" y2="180"/>
+        <line x1="90" y1="0" x2="90" y2="240"/><line x1="180" y1="0" x2="180" y2="240"/><line x1="270" y1="0" x2="270" y2="240"/>
+      </g>
+      <text x="11" y="19" fill="#9AA0AA" font-size="11" font-family="ui-monospace, Menlo, monospace" letter-spacing="0.6">${caption}</text>
+      <g transform="translate(0, 34)">${inner}</g>
+    </svg>`;
+
+  const S = {
+    sakata: box("FIG 01 // OHLC MORNING STAR REVERSAL", `
+      <line x1="78" y1="38" x2="78" y2="132" stroke="#D9534F" stroke-width="1.5"/><rect x="68" y="48" width="20" height="64" fill="#D9534F"/>
+      <line x1="136" y1="112" x2="136" y2="152" stroke="#C9A84C" stroke-width="1.5"/><rect x="126" y="126" width="20" height="7" fill="#C9A84C"/>
+      <line x1="194" y1="36" x2="194" y2="130" stroke="#48A868" stroke-width="1.5"/><rect x="184" y="46" width="20" height="70" fill="#48A868"/>
+      <circle cx="136" cy="130" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="222" y="80" fill="#F4F0E6" font-size="13" font-weight="700">阴极生阳 · 情绪反转</text>
+      <text x="222" y="100" fill="#9AA0AA" font-size="11.5">现代K线蜡烛图直接鼻祖</text>
+    `),
+    dow: box("FIG 02 // PRIMARY TIDE &amp; HIGHER HIGHS", `
+      <line x1="24" y1="146" x2="336" y2="38" stroke="rgba(244,240,230,0.3)" stroke-width="1" stroke-dasharray="4 4"/>
+      <polyline class="draw-line" points="24,146 96,86 134,118 216,54 254,86 330,32" fill="none" stroke="#C9A84C" stroke-width="2.4"/>
+      <circle cx="216" cy="54" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="78" y="72" fill="#F4F0E6" font-size="11.5" font-family="ui-monospace, Menlo, monospace">HH</text>
+      <text x="196" y="42" fill="#C9A84C" font-size="12" font-family="ui-monospace, Menlo, monospace">HH CONFIRMED</text>
+    `),
+    bachelier: box("FIG 03 // WIENER PROCESS &amp; NORMAL DIFFUSION", `
+      <polyline class="draw-line" points="20,96 52,70 82,126 114,56 146,104 178,44 210,130 236,88" fill="none" stroke="#F4F0E6" stroke-width="2"/>
+      <path class="draw-line" d="M248,146 Q272,146 288,88 Q304,34 320,88 Q336,146 348,146" fill="rgba(201,168,76,0.16)" stroke="#C9A84C" stroke-width="2"/>
+      <circle cx="304" cy="52" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="246" y="164" fill="#C9A84C" font-size="11.5" font-family="ui-monospace, Menlo, monospace">σ(t) = σ₁ · √t</text>
+    `),
+    wyckoff: box("FIG 04 // ACCUMULATION &amp; SPRING SHAKEOUT", `
+      <rect x="34" y="54" width="202" height="62" fill="rgba(201,168,76,0.06)" stroke="rgba(244,240,230,0.28)" stroke-dasharray="3 3"/>
+      <polyline class="draw-line" points="18,34 52,114 92,56 132,112 168,58 194,146 220,54 252,72 332,28" fill="none" stroke="#F4F0E6" stroke-width="2.2"/>
+      <circle cx="194" cy="146" r="4.5" fill="#C9A84C" class="gold-beacon"/>
+      <text x="140" y="168" fill="#C9A84C" font-size="12" font-weight="700">SPRING 终极震仓</text>
+      <text x="252" y="46" fill="#48A868" font-size="12" font-family="ui-monospace, Menlo, monospace">SOS</text>
+    `),
+    livermore: box("FIG 05 // PIVOT BREAKOUT &amp; PYRAMIDING", `
+      <line x1="20" y1="95" x2="340" y2="95" stroke="#C9A84C" stroke-width="1" stroke-dasharray="4 4"/>
+      <polyline class="draw-line" points="20,148 76,98 112,132 162,95 212,68 262,48 328,28" fill="none" stroke="#F4F0E6" stroke-width="2.4"/>
+      <circle cx="162" cy="95" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="150" y="116" fill="#C9A84C" font-size="12" font-weight="700">关键点首仓突破</text>
+      <text x="226" y="78" fill="#48A868" font-size="12">浮盈金字塔加码</text>
+    `),
+    elliott: box("FIG 06 // 5-WAVE IMPULSE &amp; ABC CORRECTION", `
+      <polyline class="draw-line" points="20,148 64,96 92,124 166,42 196,74 242,30 278,92 304,68 340,116" fill="none" stroke="#C9A84C" stroke-width="2.3"/>
+      <circle cx="166" cy="42" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="144" y="30" fill="#F4F0E6" font-size="12" font-weight="700">WAVE 3 主升</text>
+      <text x="275" y="110" fill="#9AA0AA" font-size="11.5">A</text><text x="300" y="60" fill="#9AA0AA" font-size="11.5">B</text><text x="334" y="132" fill="#9AA0AA" font-size="11.5">C</text>
+    `),
+    gann: box("FIG 07 // GANN 1x1 TIME-PRICE EQUILIBRIUM", `
+      <line x1="30" y1="152" x2="195" y2="28" stroke="rgba(244,240,230,0.28)" stroke-width="1"/>
+      <line x1="30" y1="152" x2="300" y2="32" stroke="#C9A84C" stroke-width="2"/>
+      <line x1="30" y1="152" x2="340" y2="96" stroke="rgba(244,240,230,0.28)" stroke-width="1"/>
+      <polyline class="draw-line" points="30,152 104,116 168,94 236,62 296,34" fill="none" stroke="#F4F0E6" stroke-width="1.8" stroke-dasharray="3 3"/>
+      <circle cx="236" cy="62" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="206" y="24" fill="#C9A84C" font-size="12" font-family="ui-monospace, Menlo, monospace">1×1 EQUILIBRIUM</text>
+    `),
+    patterns: box("FIG 08 // HEAD &amp; SHOULDERS NECKLINE BREAK", `
+      <line x1="24" y1="108" x2="334" y2="108" stroke="#C9A84C" stroke-width="1" stroke-dasharray="4 4"/>
+      <polyline class="draw-line" points="24,148 70,70 106,108 152,36 198,108 234,74 268,108 312,156" fill="none" stroke="#F4F0E6" stroke-width="2.2"/>
+      <circle cx="268" cy="108" r="4" fill="#D9534F" class="gold-beacon"/>
+      <text x="132" y="26" fill="#9AA0AA" font-size="11.5">HEAD 买盘衰竭</text>
+      <text x="274" y="100" fill="#D9534F" font-size="12" font-weight="700">破颈线</text>
+    `),
+    emh: box("FIG 09 // INSTANTANEOUS INFORMATION PRICING", `
+      <line x1="120" y1="30" x2="120" y2="156" stroke="rgba(244,240,230,0.25)" stroke-dasharray="3 3"/>
+      <polyline class="draw-line" points="24,126 120,126 120,52 334,52" fill="none" stroke="#C9A84C" stroke-width="2.4"/>
+      <polyline points="120,126 195,94 268,66 334,52" fill="none" stroke="#9AA0AA" stroke-width="1.2" stroke-dasharray="3 3"/>
+      <circle cx="120" cy="52" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="130" y="42" fill="#F4F0E6" font-size="12">信息瞬时定价 · 零滞后套利</text>
+    `),
+    turtle: box("FIG 10 // 20-DAY DONCHIAN CHANNEL &amp; ATR", `
+      <polyline points="22,68 164,68 194,44 336,44" fill="none" stroke="#C9A84C" stroke-width="1.4"/>
+      <polyline points="22,138 212,138 242,110 336,110" fill="none" stroke="rgba(244,240,230,0.25)" stroke-width="1"/>
+      <polyline class="draw-line" points="22,104 74,80 120,122 166,67 224,46 314,48" fill="none" stroke="#F4F0E6" stroke-width="2.4"/>
+      <circle cx="166" cy="67" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="170" y="88" fill="#48A868" font-size="12" font-weight="700">突破20日高点入场</text>
+    `),
+    indicators: box("FIG 11 // BOLLINGER BANDS SQUEEZE (±2σ)", `
+      <path d="M22,50 Q115,78 175,82 Q245,42 338,32 L338,148 Q245,138 175,104 Q115,108 22,140 Z" fill="rgba(201,168,76,0.09)" stroke="rgba(201,168,76,0.45)" stroke-width="1.2"/>
+      <polyline class="draw-line" points="22,94 100,93 175,93 250,64 338,44" fill="none" stroke="#F4F0E6" stroke-width="2.2"/>
+      <circle cx="175" cy="93" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="126" y="165" fill="#C9A84C" font-size="12">波动率极度收窄 → 开口爆发</text>
+    `),
+    behavioral: box("FIG 12 // PROSPECT THEORY VALUE FUNCTION", `
+      <line x1="180" y1="30" x2="180" y2="156" stroke="rgba(244,240,230,0.25)" stroke-width="1"/>
+      <line x1="34" y1="92" x2="326" y2="92" stroke="rgba(244,240,230,0.25)" stroke-width="1"/>
+      <path class="draw-line" d="M180,92 Q235,52 315,44" fill="none" stroke="#48A868" stroke-width="2.4"/>
+      <path class="draw-line" d="M180,92 Q142,140 62,150" fill="none" stroke="#D9534F" stroke-width="2.4"/>
+      <circle cx="118" cy="134" r="4" fill="#D9534F" class="gold-beacon"/>
+      <text x="36" y="120" fill="#D9534F" font-size="12" font-weight="700">损失厌恶 2.25x</text>
+    `),
+    profile: box("FIG 13 // TPO MARKET PROFILE &amp; POC", `
+      <rect x="34" y="42" width="46" height="9" fill="rgba(244,240,230,0.35)"/>
+      <rect x="34" y="58" width="98" height="9" fill="rgba(244,240,230,0.6)"/>
+      <rect x="34" y="74" width="154" height="11" fill="#C9A84C"/>
+      <rect x="34" y="92" width="106" height="9" fill="rgba(244,240,230,0.6)"/>
+      <rect x="34" y="108" width="52" height="9" fill="rgba(244,240,230,0.35)"/>
+      <circle cx="188" cy="80" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="200" y="84" fill="#C9A84C" font-size="12" font-weight="700">POC 控制点</text>
+      <text x="196" y="106" fill="#9AA0AA" font-size="11.5">70% 价值区双向拍卖</text>
+    `),
+    sperandeo: box("FIG 14 // 2B FALSE BREAKOUT LIQUIDITY TRAP", `
+      <line x1="28" y1="62" x2="332" y2="62" stroke="rgba(244,240,230,0.35)" stroke-width="1" stroke-dasharray="4 4"/>
+      <polyline class="draw-line" points="22,148 104,62 152,106 206,36 240,82 312,152" fill="none" stroke="#F4F0E6" stroke-width="2.4"/>
+      <circle cx="206" cy="36" r="4" fill="#D9534F"/>
+      <circle cx="224" cy="62" r="4.5" fill="#C9A84C" class="gold-beacon"/>
+      <text x="224" y="54" fill="#C9A84C" font-size="11.5" font-weight="700">2B 跌回猎杀反转</text>
+    `),
+    orderflow: box("FIG 15 // FOOTPRINT BID × ASK IMBALANCE", `
+      <rect x="28" y="34" width="118" height="122" fill="rgba(16,19,26,0.95)" stroke="#C9A84C" stroke-width="1"/>
+      <text x="38" y="62" fill="#9AA0AA" font-size="11.5" font-family="ui-monospace, Menlo, monospace">112 × <tspan fill="#48A868" font-weight="bold">890!</tspan></text>
+      <text x="38" y="90" fill="#9AA0AA" font-size="11.5" font-family="ui-monospace, Menlo, monospace">185 × <tspan fill="#48A868" font-weight="bold">960!</tspan></text>
+      <text x="38" y="118" fill="#D9534F" font-size="11.5" font-family="ui-monospace, Menlo, monospace">410! × 32</text>
+      <text x="38" y="146" fill="#C9A84C" font-size="10.5" font-family="ui-monospace, Menlo, monospace">DELTA +1,285</text>
+      <circle cx="152" cy="86" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="166" y="82" fill="#F4F0E6" font-size="12.5" font-weight="700">Ask ≥ 300% 主动扫单</text>
+      <text x="166" y="104" fill="#9AA0AA" font-size="11.5">穿透K线直击机构盘口</text>
+    `),
+    quant: box("FIG 16 // COINTEGRATION STAT-ARB (±2σ)", `
+      <line x1="22" y1="50" x2="338" y2="50" stroke="#D9534F" stroke-dasharray="3 3"/>
+      <line x1="22" y1="92" x2="338" y2="92" stroke="rgba(244,240,230,0.25)"/>
+      <line x1="22" y1="134" x2="338" y2="134" stroke="#48A868" stroke-dasharray="3 3"/>
+      <polyline class="draw-line" points="22,92 74,48 128,92 182,136 236,92 290,50 336,92" fill="none" stroke="#C9A84C" stroke-width="2.4"/>
+      <circle cx="182" cy="136" r="4" fill="#C9A84C" class="gold-beacon"/>
+      <text x="216" y="42" fill="#D9534F" font-size="11.5" font-family="ui-monospace, Menlo, monospace">+2σ SHORT SPREAD</text>
+      <text x="216" y="156" fill="#48A868" font-size="11.5" font-family="ui-monospace, Menlo, monospace">-2σ LONG SPREAD</text>
+    `)
+  };
+  return S[type] || S.dow;
+}
+
+/* =========================================================================
+   3. Web Audio 音效（低频撞击 + 机械锁扣 + 激光扫频）
+   ========================================================================= */
+let audioEnabled = false, actx = null;
+function getAudio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) actx = new AC();
+  }
+  if (actx && actx.state === "suspended") actx.resume();
+  return actx;
+}
+function playSubLock() {
+  if (!audioEnabled) return;
+  try {
+    const c = getAudio(), t = c.currentTime;
+    const sub = c.createOscillator(), g1 = c.createGain();
+    sub.type = "sine";
+    sub.frequency.setValueAtTime(110, t);
+    sub.frequency.exponentialRampToValueAtTime(38, t + 0.24);
+    g1.gain.setValueAtTime(0.14, t);
+    g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    sub.connect(g1); g1.connect(c.destination);
+    sub.start(t); sub.stop(t + 0.3);
+
+    const clk = c.createOscillator(), g2 = c.createGain();
+    clk.type = "triangle";
+    clk.frequency.setValueAtTime(920, t);
+    clk.frequency.exponentialRampToValueAtTime(240, t + 0.04);
+    g2.gain.setValueAtTime(0.05, t);
+    g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    clk.connect(g2); g2.connect(c.destination);
+    clk.start(t); clk.stop(t + 0.06);
+  } catch (e) {}
+}
+function playLaserSweep() {
+  if (!audioEnabled) return;
+  try {
+    const c = getAudio(), t = c.currentTime;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(480, t + 0.35);
+    osc.frequency.exponentialRampToValueAtTime(160, t + 0.7);
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.exponentialRampToValueAtTime(0.04, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.72);
+    osc.connect(g); g.connect(c.destination);
+    osc.start(t); osc.stop(t + 0.75);
+  } catch (e) {}
+}
+
+/* =========================================================================
+   4. 导演状态机（第一幕钩子 → 第二幕特写/飞行 → 第三幕年鉴）
+   ========================================================================= */
+const SPEEDS = [0.8, 1.0, 1.5];
+const ACT1_DUR = 2200, DWELL_DUR = 5000, FLY_DUR = 850;
+const stageEl = document.getElementById("stage");
+
+const st = {
+  act: 1, phase: "dwell", idx: 0, maxIdx: -1,
+  playing: true, spdIdx: 1, elapsed: 0, lastTs: null,
+  clean: false, cx: 0, cy: 0, scale: 0.6
+};
+const spd = () => SPEEDS[st.spdIdx];
+window.__doc = { st, DATA, showCloseUp: null };
+
+/* ---- 等比字号：宽度为主、高度兜底，避免矮屏被文字撑爆 ---- */
+function applyScale() {
+  const w = stageEl.clientWidth || 390;
+  const h = stageEl.clientHeight || 760;
+  const s = Math.min(1.26, Math.max(0.80, Math.min(w / 390, h / 720)));
+  stageEl.style.setProperty("--s", s.toFixed(3));
+  return s;
+}
+
+function dimSpace(v) {
+  const el = document.getElementById("spaceLayer");
+  if (el) el.style.opacity = String(v);
+}
+
+function setCam(x, y, s, smooth = true) {
+  const cam = document.getElementById("camera");
+  cam.style.transition = smooth ? "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1)" : "none";
+  cam.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+  st.cx = x; st.cy = y; st.scale = s;
+}
+/* 把某个节点推到画面 44% 高度处 */
+function focusNode(i, z = 1.32, smooth = true) {
+  const n = DATA[i];
+  if (!n) return;
+  setCam(
+    stageEl.clientWidth / 2 - (n.pos.x + NODE_W / 2) * z,
+    stageEl.clientHeight * 0.44 - (n.pos.y + NODE_H / 2) * z,
+    z, smooth
+  );
+}
+function focusFinale(smooth = true) {
+  const sw = stageEl.clientWidth, sh = stageEl.clientHeight;
+  const card = document.getElementById("finaleCard");
+  const safe = document.getElementById("safeHint");
+  const top = card.classList.contains("show") ? card.offsetTop + card.offsetHeight + 12 : 96;
+  const bottom = safe ? safe.offsetTop - 10 : sh - 160;
+  const uh = Math.max(240, bottom - top);
+  const z = Math.min((sw - 16) / 720, uh / 1120);
+  setCam((sw - 720 * z) / 2, top + (uh - 1120 * z) / 2, z, smooth);
+}
+
+function renderConstellation(activeIdx, fromIdx = null, toIdx = null) {
+  document.getElementById("nodes").innerHTML = DATA.map((d, i) => {
+    if (i > st.maxIdx) return "";
+    const act = i === activeIdx;
+    return `
+      <div class="c-node ${act ? "active" : ""}" data-jump="${i}" style="left:${d.pos.x}px;top:${d.pos.y}px;">
+        <div style="display:flex;justify-content:space-between;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--gold);margin-bottom:3px;">
+          <span>${d.yr}</span><span>#${String(i + 1).padStart(2, "0")}</span>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.title}</div>
+      </div>`;
+  }).join("");
+
+  let edges = "";
+  DATA.forEach((c, i) => {
+    if (i > st.maxIdx || !c.parent) return;
+    const p = MAP[c.parent];
+    const x1 = p.pos.x + NODE_W / 2, y1 = p.pos.y + NODE_H / 2;
+    const x2 = c.pos.x + NODE_W / 2, y2 = c.pos.y + NODE_H / 2;
+    const d = `M ${x1} ${y1} Q ${(x1 + x2) / 2} ${(y1 + y2) / 2 - 24}, ${x2} ${y2}`;
+    const hi = st.act === 3 || i === activeIdx;
+    edges += `<path d="${d}" fill="none" stroke="${hi ? "#C9A84C" : "rgba(244,240,230,0.22)"}" stroke-width="${hi ? 2 : 1.1}"/>`;
+  });
+  document.getElementById("edges").innerHTML = edges;
+
+  const beams = document.getElementById("beams");
+  if (fromIdx !== null && toIdx !== null) {
+    const a = DATA[fromIdx], b = DATA[toIdx];
+    const x1 = a.pos.x + NODE_W / 2, y1 = a.pos.y + NODE_H / 2;
+    const x2 = b.pos.x + NODE_W / 2, y2 = b.pos.y + NODE_H / 2;
+    const d = `M ${x1} ${y1} Q ${(x1 + x2) / 2} ${(y1 + y2) / 2 - 28}, ${x2} ${y2}`;
+    beams.innerHTML = `
+      <path d="${d}" fill="none" stroke="#C9A84C" stroke-width="3.2" filter="url(#goldGlow)" class="laser-beam"/>
+      <circle r="5" fill="#F4F0E6" filter="url(#goldGlow)">
+        <animateMotion dur="0.78s" repeatCount="1" fill="freeze" path="${d}"/>
+      </circle>`;
+  } else {
+    beams.innerHTML = "";
+  }
+}
+
+function renderRail() {
+  document.getElementById("rail").innerHTML = DATA.map((d, i) => {
+    const c = st.act === 2 && i === st.idx ? "active" : (i <= st.maxIdx ? "done" : "");
+    return `<div class="seg ${c}" data-jump="${i}" role="button" aria-label="第 ${i + 1} 幕"></div>`;
+  }).join("");
+}
+
+/* ------------------------------ 第一幕：钩子 ------------------------------ */
+function showAct1() {
+  st.act = 1; st.phase = "dwell"; st.idx = 0; st.maxIdx = -1; st.elapsed = 0;
+  document.getElementById("finaleCard").classList.remove("show");
+  const layer = document.getElementById("closeupLayer");
+  layer.className = "here";
+  layer.innerHTML = `
+    <div class="watermark-year">1755</div>
+    <div class="act-body doc-enter">
+      <div class="kicker" style="border-left:2px solid var(--gold);padding-left:9px;">
+        BLOOMBERG ARCHIVE // 300 YEARS OF MARKET EVOLUTION
+      </div>
+      <div>
+        <h1 class="h1-hook">
+          从 <em>1755 日本米市</em>到<em>华尔街微观订单流</em>，人类用 300 年进化出 16 大交易圣杯
+        </h1>
+        <div style="height:0.5px;background:var(--line);width:100%;margin-top:calc(18px * var(--s));"></div>
+        <div class="era-rail">
+          <span>1755 米市K线</span><span>1884 道氏潮汐</span><span>1938 五浪结构</span><span>2026 算法帝国</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px;">
+        <span class="kicker" style="color:var(--muted);letter-spacing:1px;">CHRONOLOGY ENGINE<br>1755 → 2026</span>
+        <span id="hookYr" style="font-family:ui-monospace,Menlo,monospace;font-size:calc(44px * var(--s));font-weight:800;color:var(--gold);line-height:0.9;">1755</span>
+      </div>
+    </div>`;
+  renderRail();
+  renderConstellation(-1);
+  dimSpace(0.35);
+  focusNode(0, 0.72, false);
+  syncPlayBtn();
+}
+
+/* ---------------------------- 第二幕：全屏特写 ---------------------------- */
+function showCloseUp(i, pauseAfter = false) {
+  const idx = Math.max(0, Math.min(DATA.length - 1, i));
+  const d = DATA[idx];
+  st.act = 2; st.phase = "dwell"; st.idx = idx; st.maxIdx = Math.max(st.maxIdx, idx); st.elapsed = 0;
+  if (pauseAfter) st.playing = false;
+
+  document.getElementById("finaleCard").classList.remove("show");
+  const layer = document.getElementById("closeupLayer");
+  layer.className = "here";
+  layer.innerHTML = `
+    <div class="watermark-year">${d.wm}</div>
+    <div class="act-body doc-enter">
+      <div class="head-row">
+        <div style="min-width:0;">
+          <div class="kicker" style="margin-bottom:5px;">ARCHIVE ${String(idx + 1).padStart(2, "0")} / 16 · ${d.tag}</div>
+          <div class="title-row">
+            <span class="yr-big">${d.yr}</span>
+            <h2 class="h2-thesis">${d.title}</h2>
+          </div>
+          <div class="meta-line">${d.who}</div>
+        </div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(244,240,230,0.14)" stroke-width="2.2"/>
+            <circle id="ring" cx="18" cy="18" r="15" fill="none" stroke="#C9A84C" stroke-width="2.2" stroke-dasharray="94.25" stroke-dashoffset="0"/>
+          </svg>
+          <span id="ringSec">5.0s</span>
+        </div>
+      </div>
+
+      <div class="schem-wrap">${renderSchematic(d.svg)}</div>
+
+      <div class="caption-block">
+        <div class="body-txt"><span class="tag-gold">【第一性原理】</span>${d.p1}</div>
+        <div class="body-txt dim"><span class="tag-cyan">【演化裂变】</span>${d.p2}</div>
+      </div>
+    </div>`;
+  renderRail();
+  renderConstellation(idx);
+  dimSpace(0.16);
+  focusNode(idx, 1.32, true);
+  playSubLock();
+  syncPlayBtn();
+}
+
+window.__doc.showCloseUp = showCloseUp;
+
+function startFly(fromIdx, toIdx) {
+  st.act = 2; st.phase = "fly"; st.elapsed = 0;
+  st.maxIdx = Math.max(st.maxIdx, toIdx);
+  document.getElementById("closeupLayer").className = "away";
+  dimSpace(1);
+  renderConstellation(toIdx, fromIdx, toIdx);
+
+  const a = DATA[fromIdx], b = DATA[toIdx];
+  const mx = (a.pos.x + b.pos.x) / 2 + NODE_W / 2;
+  const my = (a.pos.y + b.pos.y) / 2 + NODE_H / 2;
+  const z = 0.85;
+  setCam(stageEl.clientWidth / 2 - mx * z, stageEl.clientHeight * 0.44 - my * z, z, true);
+  playLaserSweep();
+}
+
+/* ---------------------------- 第三幕：年鉴全景 ---------------------------- */
+function showFinale() {
+  st.act = 3; st.phase = "finale"; st.maxIdx = DATA.length - 1; st.playing = false;
+  document.getElementById("closeupLayer").className = "away";
+  document.getElementById("finaleCard").classList.add("show");
+  renderRail();
+  renderConstellation(-1);
+  dimSpace(1);
+  focusFinale(true);
+  playSubLock();
+  syncPlayBtn();
+}
+
+/* ------------------------------ 主计时循环 ------------------------------ */
+function tick(ts) {
+  if (!st.lastTs) st.lastTs = ts;
+  const dt = (ts - st.lastTs) * spd();
+  st.lastTs = ts;
+
+  if (st.playing) {
+    st.elapsed += dt;
+    if (st.act === 1) {
+      const r = Math.min(1, st.elapsed / ACT1_DUR);
+      const el = document.getElementById("hookYr");
+      if (el) el.textContent = Math.round(1755 + (2026 - 1755) * r);
+      if (st.elapsed >= ACT1_DUR) showCloseUp(0, false);
+    } else if (st.act === 2) {
+      if (st.phase === "dwell") {
+        const r = Math.min(1, st.elapsed / DWELL_DUR);
+        const ring = document.getElementById("ring"), sec = document.getElementById("ringSec");
+        if (ring) ring.style.strokeDashoffset = (94.25 * r).toFixed(2);
+        if (sec) sec.textContent = `${Math.max(0, (DWELL_DUR - st.elapsed) / (1000 * spd())).toFixed(1)}s`;
+        if (st.elapsed >= DWELL_DUR) {
+          if (st.idx < DATA.length - 1) startFly(st.idx, st.idx + 1);
+          else showFinale();
+        }
+      } else if (st.phase === "fly" && st.elapsed >= FLY_DUR) {
+        showCloseUp(st.idx + 1, false);
+      }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* =========================================================================
+   5. 控件 / 纯净录屏 / 手势 / 快捷键
+   ========================================================================= */
+function syncPlayBtn() {
+  const b = document.getElementById("bPlay");
+  b.textContent = st.playing ? "暂停" : (st.act === 3 ? "重播" : "继续");
+}
+function setClean(flag) {
+  st.clean = typeof flag === "boolean" ? flag : !st.clean;
+  document.body.classList.toggle("clean-mode", st.clean);
+  const t = document.getElementById("toast");
+  t.style.opacity = st.clean ? "1" : "0";
+  if (st.clean) setTimeout(() => { t.style.opacity = "0"; }, 2000);
+}
+function goPrev() {
+  if (st.act === 3) showCloseUp(DATA.length - 1, true);
+  else if (st.act === 2 && st.idx > 0) showCloseUp(st.idx - 1, true);
+  else showAct1();
+}
+function goNext() {
+  if (st.act === 1) showCloseUp(0, true);
+  else if (st.act === 2 && st.idx < DATA.length - 1) showCloseUp(st.idx + 1, true);
+  else showFinale();
+}
+
+document.getElementById("bPlay").onclick = e => {
+  e.stopPropagation();
+  if (!st.playing && st.act === 3) { st.playing = true; showAct1(); return; }
+  st.playing = !st.playing;
+  if (st.playing) st.lastTs = performance.now();
+  syncPlayBtn();
+};
+document.getElementById("bPrev").onclick = e => { e.stopPropagation(); goPrev(); };
+document.getElementById("bNext").onclick = e => { e.stopPropagation(); goNext(); };
+document.getElementById("bReplay").onclick = e => { e.stopPropagation(); st.playing = true; st.lastTs = performance.now(); showAct1(); };
+document.getElementById("bSpeed").onclick = e => {
+  e.stopPropagation();
+  st.spdIdx = (st.spdIdx + 1) % SPEEDS.length;
+  e.currentTarget.textContent = `${SPEEDS[st.spdIdx].toFixed(1)}x`;
+};
+document.getElementById("bAudio").onclick = e => {
+  e.stopPropagation();
+  audioEnabled = !audioEnabled;
+  e.currentTarget.textContent = audioEnabled ? "音效开" : "音效";
+  e.currentTarget.classList.toggle("gold", audioEnabled);
+  if (audioEnabled) playSubLock();
+};
+document.getElementById("bClean").onclick = e => { e.stopPropagation(); setClean(true); };
+
+/* 点击节点 / 进度段跳转 */
+stageEl.addEventListener("click", e => {
+  if (st.clean) { setClean(false); return; }
+  const j = e.target.closest("[data-jump]");
+  if (j) showCloseUp(Number(j.dataset.jump), true);
+});
+
+/* 竖屏滑动切幕：上滑 / 左滑 → 下一幕，下滑 / 右滑 → 上一幕 */
+let swipe = null;
+stageEl.addEventListener("pointerdown", e => {
+  if (st.act !== 2) return;
+  if (e.target.closest("#hud,#rail,[data-jump]")) return;
+  swipe = { x: e.clientX, y: e.clientY, t: Date.now() };
+});
+stageEl.addEventListener("pointerup", e => {
+  if (!swipe) return;
+  const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+  const vertical = Math.abs(dy) > Math.abs(dx);
+  const far = vertical ? Math.abs(dy) > 56 : Math.abs(dx) > 56;
+  if (far && Date.now() - swipe.t < 800) {
+    if (vertical ? dy < 0 : dx < 0) goNext(); else goPrev();
+  }
+  swipe = null;
+});
+stageEl.addEventListener("pointercancel", () => { swipe = null; });
+
+/* 第三幕：拖拽全景 */
+let drag = { on: false, sx: 0, sy: 0, cx: 0, cy: 0 };
+document.getElementById("spaceLayer").addEventListener("pointerdown", e => {
+  if (st.act !== 3) return;
+  drag = { on: true, sx: e.clientX, sy: e.clientY, cx: st.cx, cy: st.cy };
+});
+window.addEventListener("pointermove", e => {
+  if (!drag.on || st.act !== 3) return;
+  setCam(drag.cx + (e.clientX - drag.sx), drag.cy + (e.clientY - drag.sy), st.scale, false);
+});
+window.addEventListener("pointerup", () => { drag.on = false; });
+
+/* 键盘（桌面录屏时好用） */
+window.addEventListener("keydown", e => {
+  if (e.code === "Space") { e.preventDefault(); document.getElementById("bPlay").click(); }
+  else if (e.code === "ArrowRight") goNext();
+  else if (e.code === "ArrowLeft") goPrev();
+  else if (e.key === "r" || e.key === "R") document.getElementById("bReplay").click();
+  else if (e.key === "c" || e.key === "C") setClean();
+  else if (e.key === "Escape" && st.clean) setClean(false);
+});
+
+/* 尺寸变化：重算字号并重新对焦（防抖到下一帧） */
+let rafResize = null;
+function onResize() {
+  if (rafResize) cancelAnimationFrame(rafResize);
+  rafResize = requestAnimationFrame(() => {
+    applyScale();
+    if (st.act === 3) focusFinale(false);
+    else if (st.act === 1) focusNode(0, 0.72, false);
+    else focusNode(st.idx, 1.32, false);
+  });
+}
+window.addEventListener("resize", onResize);
+window.addEventListener("orientationchange", () => setTimeout(onResize, 220));
+
+/* =========================================================================
+   6. 启动
+   ========================================================================= */
+function boot() {
+  applyScale();
+  showAct1();
+  requestAnimationFrame(tick);
+  /* 字体加载完成后卡片高度会变，补一次对焦 */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => onResize());
+  }
+  setTimeout(onResize, 160);
+}
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>交易理论演变与衍生图谱 | Evolution of Trading Theories</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Noto Sans SC', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            obsidian: '#0B0E14',
+            card: '#131822',
+            cardHover: '#192130',
+            borderSubtle: '#1e293b',
+            cyanGlow: '#06b6d4',
+            amberGlow: '#f59e0b',
+            emeraldGlow: '#10b981',
+            purpleGlow: '#8b5cf6',
+            roseGlow: '#f43f5e',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #0B0E14;
+      color: #f1f5f9;
+      font-family: 'Inter', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+      overflow-x: hidden;
+    }
+    .quant-grid {
+      background-size: 36px 36px;
+      background-image: 
+        linear-gradient(to right, rgba(30, 41, 59, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0B0E14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    @keyframes dashFlow {
+      to {
+        stroke-dashoffset: -24;
+      }
+    }
+    @keyframes panelRefresh {
+      0% {
+        opacity: 0.35;
+        transform: translateY(6px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .panel-refresh-anim {
+      animation: panelRefresh 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    .edge-active {
+      stroke-dasharray: 6 6;
+      animation: dashFlow 0.9s linear infinite;
+    }
+    .node-card {
+      pointer-events: auto;
+      cursor: pointer;
+      z-index: 10;
+      touch-action: manipulation;
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.2s ease,
+                  border-color 0.2s ease,
+                  opacity 0.22s ease;
+    }
+    .node-card:hover {
+      transform: translateY(-3px) scale(1.015);
+      z-index: 20;
+    }
+    .glass-panel {
+      background: rgba(19, 24, 34, 0.95);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+
+  <!-- Top Navigation & Control Header -->
+  <header class="sticky top-0 z-30 glass-panel border-b border-borderSubtle px-4 py-3 lg:px-6">
+    <div class="max-w-[1800px] mx-auto flex flex-col gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-cyan-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+            <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 14l4-4 4 3 5-7" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="11" cy="10" r="1.5" fill="currentColor"/>
+              <circle cx="15" cy="13" r="1.5" fill="currentColor"/>
+              <circle cx="20" cy="6" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-base sm:text-lg lg:text-xl font-bold tracking-tight text-white">
+                交易理论演变与衍生图谱
+              </h1>
+              <span class="hidden sm:inline-block text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                EVOLUTION OF TRADING THEORIES · 16 NODES
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">
+              从1755年酒田战法到道氏基石，再到威科夫、波浪、订单流与现代量化的完整思想谱系
+            </p>
+          </div>
+        </div>
+
+        <!-- View Mode & Search Controls -->
+        <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+          <div class="relative flex-1 sm:w-64">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input 
+              id="searchInput" 
+              type="text" 
+              placeholder="搜索理论、创始人或概念 (如: 2B, 失衡)..." 
+              class="w-full bg-obsidian/90 border border-borderSubtle focus:border-cyan-500/70 rounded-xl pl-9 pr-8 py-1.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition"
+            />
+            <button id="clearSearchBtn" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+              ✕
+            </button>
+          </div>
+
+          <div class="inline-flex rounded-xl bg-obsidian p-1 border border-borderSubtle">
+            <button id="btnTreeView" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/></svg>
+              <span>演化树状图谱</span>
+            </button>
+            <button id="btnTimelineView" type="button" class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>历史时间轴视图</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Lineage Filter Pills -->
+      <div id="filterBar" class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar"></div>
+    </div>
+  </header>
+
+  <!-- Main Workspace: Interactive Graph / Timeline + Detail Inspector -->
+  <main class="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
+    
+    <!-- Left / Center Viewport -->
+    <div id="mainViewport" class="flex-1 relative quant-grid overflow-hidden min-h-[64vh] lg:min-h-[calc(100vh-118px)]">
+      
+      <!-- Floating Helper Banner -->
+      <div id="originHintBanner" class="absolute top-3 left-3 right-3 sm:right-auto sm:max-w-md z-20 glass-panel border border-amber-500/30 rounded-xl p-3 shadow-lg flex items-start gap-2.5">
+        <span class="text-amber-400 text-base leading-none mt-0.5">💡</span>
+        <div class="text-xs text-slate-300 leading-relaxed">
+          <span class="font-semibold text-amber-300">交易最原始的理论是什么？</span>
+          西方现代技术分析的鼻祖是 <button type="button" onclick="selectNode('dow', true)" class="underline decoration-amber-400/60 text-amber-200 hover:text-white font-medium">道氏理论 (1884)</button>，而人类最早的系统化交易理论则是日本江户时代的 <button type="button" onclick="selectNode('sakata', true)" class="underline decoration-amber-400/60 text-amber-200 hover:text-white font-medium">本间宗久《酒田战法》(1755)</button>。点击任意卡片查看完整6维深度详解。
+        </div>
+        <button type="button" onclick="document.getElementById('originHintBanner').remove()" class="text-slate-500 hover:text-slate-300 text-xs ml-1">✕</button>
+      </div>
+
+      <!-- Canvas Controls (Zoom / Reset) for Tree View -->
+      <div id="canvasControls" class="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 glass-panel border border-borderSubtle rounded-xl p-1.5 shadow-xl">
+        <button id="zoomInBtn" type="button" title="放大" class="p-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <span id="zoomLevelText" class="text-xs font-mono text-slate-400 px-1.5 select-none">85%</span>
+        <button id="zoomOutBtn" type="button" title="缩小" class="p-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+        </button>
+        <div class="w-px h-5 bg-borderSubtle"></div>
+        <button id="resetViewBtn" type="button" title="一键重置视角并居中" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition">
+          重置视角/居中
+        </button>
+      </div>
+
+      <!-- Tree View Container (Pannable & Zoomable) -->
+      <div id="treeContainer" class="w-full h-full cursor-grab active:cursor-grabbing select-none overflow-hidden relative">
+        <div id="treeStage" class="origin-top-left relative" style="width: 1840px; height: 1140px;">
+          <!-- Era Background Columns -->
+          <div class="absolute inset-0 pointer-events-none flex">
+            <div class="w-[380px] h-full border-r border-slate-800/60 p-4 flex flex-col justify-end">
+              <span class="text-[11px] font-mono uppercase tracking-widest text-amber-400/60">STAGE 01 · 1755–1900 起源萌芽</span>
+            </div>
+            <div class="w-[360px] h-full border-r border-slate-800/60 p-4 flex flex-col justify-end">
+              <span class="text-[11px] font-mono uppercase tracking-widest text-cyan-400/60">STAGE 02 · 1884–1920 经典基石</span>
+            </div>
+            <div class="w-[460px] h-full border-r border-slate-800/60 p-4 flex flex-col justify-end">
+              <span class="text-[11px] font-mono uppercase tracking-widest text-emerald-400/60">STAGE 03 · 1920s–1970s 流派分化</span>
+            </div>
+            <div class="w-[640px] h-full p-4 flex flex-col justify-end">
+              <span class="text-[11px] font-mono uppercase tracking-widest text-purple-400/60">STAGE 04 · 1970s–至今 现代微观与量化</span>
+            </div>
+          </div>
+
+          <!-- SVG Edges Layer (pointer-events-none strictly enforced) -->
+          <svg id="connections-svg" class="absolute inset-0 w-full h-full pointer-events-none" style="pointer-events: none; z-index: 1;" viewBox="0 0 1840 1140">
+            <defs>
+              <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#475569" />
+              </marker>
+              <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#06b6d4" />
+              </marker>
+              <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#f59e0b" />
+              </marker>
+              <marker id="arrow-emerald" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#10b981" />
+              </marker>
+              <marker id="arrow-rose" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#f43f5e" />
+              </marker>
+              <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,1 L7,4 L0,7 Z" fill="#8b5cf6" />
+              </marker>
+            </defs>
+            <g id="edgesGroup"></g>
+          </svg>
+
+          <!-- HTML Nodes Layer -->
+          <div id="nodesLayer" class="absolute inset-0" style="z-index: 10;"></div>
+        </div>
+      </div>
+
+      <!-- Chronological Timeline Container -->
+      <div id="timelineContainer" class="hidden w-full h-full overflow-y-auto px-4 sm:px-8 pt-6 sm:pt-8 pb-16">
+        <div class="max-w-4xl mx-auto">
+          <div class="mb-8">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span>交易思想编年史 (1755 — 至今)</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">按时间顺序观察不同流派如何在同一历史时期交织碰撞、相互修正，点击卡片查看完整详情。</p>
+          </div>
+          <div id="timelineList" class="relative border-l-2 border-slate-800 ml-3 sm:ml-6 space-y-6 pb-8"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Backdrop for Detail Drawer -->
+    <div id="mobileDrawerBackdrop" onclick="closeMobileDrawer()" class="hidden fixed inset-0 bg-black/70 z-30 lg:hidden backdrop-blur-xs"></div>
+
+    <!-- Right Detail Inspector Drawer / Docked Panel -->
+    <aside id="detailPanel" class="w-full lg:w-[460px] xl:w-[500px] glass-panel border-t lg:border-t-0 lg:border-l border-borderSubtle flex flex-col z-40 lg:z-20 fixed lg:static bottom-0 left-0 right-0 max-h-[85vh] lg:max-h-[calc(100vh-118px)] rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-none overflow-y-auto transition-transform duration-300">
+      <!-- Populated dynamically when a node is selected -->
+    </aside>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // 1. LINEAGE METADATA & 16 COMPLETE TRADING THEORY NODES
+    // =========================================================================
+    const LINEAGES = [
+      { id: "all", label: "全部流派 (16)", color: "cyan", badgeClass: "bg-slate-800 text-slate-200 border-slate-700" },
+      { id: "roots", label: "起源与道氏基石", color: "amber", badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/40" },
+      { id: "microstructure", label: "量价与订单流微观派", color: "cyan", badgeClass: "bg-cyan-500/15 text-cyan-300 border-cyan-500/40" },
+      { id: "structure", label: "波浪与形态结构派", color: "emerald", badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40" },
+      { id: "trend", label: "趋势跟踪与指标派", color: "rose", badgeClass: "bg-rose-500/15 text-rose-300 border-rose-500/40" },
+      { id: "quant", label: "行为与现代量化派", color: "purple", badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/40" }
+    ];
+
+    const THEORIES = [
+      {
+        id: "sakata",
+        year: "1755",
+        sortYear: 1755,
+        era: "起源时代 · 东方大米期货",
+        school: "roots",
+        accent: "amber",
+        pos: { x: 40, y: 180 },
+        title: "酒田战法 (K线理论)",
+        enTitle: "Sakata Rules & Candlesticks",
+        founder: "本间宗久 (Munehisa Homma)",
+        summary: "人类历史上最早的系统化价格行为与交易心理学理论，诞生于日本大阪堂岛米市。",
+        parents: [],
+        children: ["dow", "chart_patterns"],
+        origin: "18世纪中叶，日本大阪堂岛米市（Dojima Rice Exchange）诞生了世界上最早的标准化期货合约“帐合米”。出生于山形县酒田港米商世家的本间宗久，通过建立覆盖数百公里的旗语与信使网络，结合对天气、丰歉与投机者情绪的长期观察，于1755年著成《三猿金泉录》，系统总结了从单根价格波动中窥探多空力道对比的“酒田五法”。",
+        firstPrinciples: "价格的每一次跳动都不是孤立的随机数字，而是买方贪婪（阳线推进）与卖方恐惧（阴线打压）在单位时间内的博弈战果。市场遵循“阴极生阳、阳极生阴”的钟摆规律——当所有人都因恐慌抛售而耗尽最后一批空头筹码时，极小的买盘即可引爆反转；同时，影线的长短直接暴露了价格试探某一边界时遭遇的拒绝（Rejection）强度。",
+        rules: [
+          "四值全息记录法：用开盘价、最高价、最低价、收盘价（OHLC）构建实体与上下影线，直观度量多空双方在周期内的控制权转移。",
+          "三川（晨星/暮星）反转战法：长阴线释放恐慌 → 次日跳空低开收出小实体十字星（多空力道衰竭均衡）→ 第三日长阳线收复失地，确认情绪拐点。",
+          "三山（三重顶）与三川（三重底）结构：价格三次冲击同一关键阻力均遭长上影线拒绝，证明上方存在压倒性供给，构成高胜率中线反转信号。",
+          "“众人看多我独空”的逆向情绪风控：当连续出现“三空（三次跳空高开）”且成交狂热时，严禁追高，转而警惕多头力竭后的踩踏回落。"
+        ],
+        limitations: "酒田战法精于捕捉局部3～5根K线的短期多空博弈与情绪拐点，但缺乏对大级别宏观趋势结构的量化分级定义，也未将现代连续撮合盘口中的成交量分布与流动性深度纳入体系；直至1991年由史蒂夫·尼森引入西方，才与道氏趋势及西方形态学完成现代融合。",
+        books: ["《三猿金泉录》(1755 · 本间宗久)", "《日本蜡烛图技术》(Steve Nison)"],
+        tags: ["K线阴阳", "市场心理", "三山三川", "晨星暮星"],
+        svgType: "sakata"
+      },
+      {
+        id: "bachelier",
+        year: "1900",
+        sortYear: 1900,
+        era: "起源时代 · 金融数学发端",
+        school: "roots",
+        accent: "purple",
+        pos: { x: 40, y: 760 },
+        title: "投机理论 (随机游走先驱)",
+        enTitle: "Theory of Speculation",
+        founder: "路易·巴舍利耶 (Louis Bachelier)",
+        summary: "首次用布朗运动（随机游走）数学模型刻画巴黎证券交易所价格波动，比爱因斯坦早五年。",
+        parents: [],
+        children: ["emh", "quant_statarb"],
+        origin: "1900年3月，法国数学家路易·巴舍利耶在巴黎索邦大学提交了博士论文《投机理论》（Théorie de la Spéculation）。当时巴黎证券交易所充斥着永续债券（Rentes）与期权交易，学界普遍认为金融投机是纯粹的赌博而无法用数学描述。巴舍利耶首次将连续时间随机过程引入资产价格建模，比爱因斯坦1905年发表分子布朗运动论文整整早了五年。",
+        firstPrinciples: "在一个买卖双方信息高度对称且自由竞争的投机市场中，任何已知的公开信息都已经被即时折算进当前成交价里。因此，下一秒价格上涨的概率与下跌的概率完全均等，投机者的数学期望收益严格等于零（Fair Game / 鞅过程）。价格的未来分布服从方差随时间平方根（√t）线性扩散的正态分布。",
+        rules: [
+          "波动率时间平方根法则：资产价格的预期波动幅度与持有时间的平方根（√t）成正比，这是现代所有期权隐含波动率（IV）换算的核心基石。",
+          "公平博弈定价原则：在无套利假设下，衍生品（如欧式期权）的公允价值等于其未来到期收益在风险中性概率分布下的期望值。",
+          "去预测化思维：既然单次价格变化近似随机游走，交易者不应执着于“预测下一根K线涨跌”，而应转向波动率定价与概率分布偏移的套利。"
+        ],
+        limitations: "纯正态分布随机游走严重低估了真实金融市场的“肥尾效应（Fat Tails）”与“波动率聚集（Volatility Clustering）”——现实中每隔几年就会发生正态分布下“十万年一遇”的暴跌崩盘；同时它忽略了趋势惯性与人类羊群效应带来的序列相关性。",
+        books: ["《投机理论 / Théorie de la Spéculation》(1900 · Louis Bachelier)"],
+        tags: ["布朗运动", "正态分布", "零期望博弈", "期权定价鼻祖"],
+        svgType: "bachelier"
+      },
+      {
+        id: "dow",
+        year: "1884–1902",
+        sortYear: 1884,
+        era: "经典基石 · 西方技术分析鼻祖",
+        school: "roots",
+        accent: "cyan",
+        pos: { x: 420, y: 420 },
+        title: "道氏理论",
+        enTitle: "Dow Theory",
+        founder: "查尔斯·道 (Charles Dow)",
+        summary: "西方现代所有技术分析、趋势跟踪与结构理论的共同祖师爷，首次将市场运动划分为三种级别趋势。",
+        parents: ["sakata"],
+        children: ["wyckoff", "elliott", "gann", "chart_patterns", "livermore"],
+        origin: "19世纪末美国工业革命狂飙突进，铁路与重工业股票成为资本市场核心，但内幕操纵与财务造假横行。道琼斯公司创始人、《华尔街日报》首任主编查尔斯·道，通过编制道琼斯工业平均指数与铁路平均指数，在1884年至1902年间发表了255篇社论，试图用市场整体价格指数作为衡量宏观经济景气度的“晴雨表”。其去世后由威廉·汉密尔顿与罗伯特·雷亚系统整理为《道氏理论》。",
+        firstPrinciples: "市场平均指数如同一面巨大的透镜，它瞬时吸收并折算了所有参与者（包括掌握内幕消息的机构、基本面分析者与盲目散户）的认知、预期与资金投票。宏观经济周期与资本配置具有强大的物理惯性，因此价格一旦确立主要趋势，在没有出现压倒性的反向供需力量之前，必然沿着原有方向继续演进。",
+        rules: [
+          "三重运动分级法：将市场拆解为①主要趋势（潮汐，持续1年至数年）、②次级折返（波浪，逆主要趋势回调33%～66%，持续数周至数月）、③日常波动（涟漪，日内噪音）。",
+          "高低点结构定义法：上升趋势必须由“不断抬高的高点（HH）+ 不断抬高的低点（HL）”构成；一旦无法创新高并跌破前低，主要趋势即告反转。",
+          "双指数相互验证原则：工业指数（生产端）与铁路指数（运输端）必须同向创出新高/新低，单一指数的孤立突破极可能是假信号。",
+          "成交量必须验证趋势：在主要上升趋势中，上涨波段必须放量、次级回调必须缩量；若价涨量缩则警示趋势动能枯竭。"
+        ],
+        limitations: "致命痛点在于“信号严重滞后”——交易者必须耐心等待次级折返结束并再次突破前高/前低才能确认趋势反转，这往往导致错过底部与顶部约20%～30%的最肥美利润区间；此外，道氏理论侧重指数方向判断，缺乏精细的入场时机与资金仓位管理规则。",
+        books: ["《股市晴雨表》(William Peter Hamilton)", "《道氏理论》(1932 · Robert Rhea)"],
+        tags: ["三大公理", "趋势分级", "相互验证", "量价配合"],
+        svgType: "dow"
+      },
+      {
+        id: "wyckoff",
+        year: "1930s",
+        sortYear: 1931,
+        era: "分支A · 量价与主力行为派",
+        school: "microstructure",
+        accent: "cyan",
+        pos: { x: 800, y: 120 },
+        title: "威科夫方法",
+        enTitle: "Wyckoff Method",
+        founder: "理查德·威科夫 (Richard Wyckoff)",
+        summary: "将道氏理论的“积累与派发”解剖为精细的机构操盘周期，揭示量价背离与流动性猎杀。",
+        parents: ["dow"],
+        children: ["market_profile", "order_flow"],
+        origin: "20世纪20至30年代，华尔街正值杰西·利弗莫尔、J.P.摩根等大庄家操控市场的黄金时代。理查德·威科夫早年曾担任多家华尔街大型券商的股票经纪与杂志主编，亲眼目睹机构如何利用舆论与假动作收割散户。他将道氏理论中的“积累期”与“派发期”拆解为可逐根K线追踪的微观量价剧本，并于1931年创立威科夫股票市场学院。",
+        firstPrinciples: "把市场背后的所有大型机构资金想象成一个统一博弈的“复合人（Composite Man）”。由于主力资金体量庞大，无法在单一价格点瞬间完成建仓或出货，他们必须在底部区间（吸筹区）利用恐慌砸盘诱使散户交出带血筹码，在顶部区间（派发区）制造狂热突破吸引散户接盘。所有主力意图最终都会在“成交量（努力）”与“价格振幅（结果）”的匹配度上暴露无遗。",
+        rules: [
+          "三大核心定律：①供求定律（需求>供给则涨）；②因果定律（横向盘整吸筹的时间与换手深度“因”，决定随后垂直拉升的幅度“果”）；③努力与结果定律（巨量却收出小实体K线，说明存在强力吸收或派发）。",
+          "吸筹五阶段（Phase A–E）识别：从初次支撑（PS）、恐慌抛售（SC）、自动反弹（AR）到二次测试（ST），构建出完整的箱体边界。",
+          "Spring（弹簧终极震仓）狙击：在吸筹末期，主力故意打穿箱体下沿支撑触发散户止损盘，随后迅速放量拉回箱体内部（Test测试低量确认无卖压），构成极高盈亏比的进场点。",
+          "SOS（强势出现）与 LPS（最后支撑点）：放量突破箱体上沿后缩量回踩不破中轴，确认主升浪启动。"
+        ],
+        limitations: "高度依赖交易员对成交量相对高低、K线收盘位置以及阶段（Phase A–E）划分的主观经验解读，面对现代高频算法制造的毫秒级假突破时，传统日线级别的盘感分析容易出现滞后与歧义。",
+        books: ["《威科夫股票市场科学》(1931 · Richard Wyckoff)", "《量价分析 / A Complete Guide to Volume Price Analysis》(Anna Coulling)"],
+        tags: ["复合人", "吸筹与派发", "Spring终极震仓", "因果定律"],
+        svgType: "wyckoff"
+      },
+      {
+        id: "elliott",
+        year: "1938",
+        sortYear: 1938,
+        era: "分支B · 分形与波浪结构派",
+        school: "structure",
+        accent: "emerald",
+        pos: { x: 800, y: 310 },
+        title: "艾略特波浪理论",
+        enTitle: "Elliott Wave Theory",
+        founder: "拉尔夫·艾略特 (R.N. Elliott)",
+        summary: "将道氏理论的“潮汐与波浪”数学化、分形化，提出群体心理永远遵循5浪驱动与3浪调整的循环。",
+        parents: ["dow"],
+        children: ["sperandeo"],
+        origin: "1930年代美国大萧条期间，曾任铁路公司会计师的拉尔夫·艾略特因重病卧床休养，耗时数年系统研究了道琼斯指数长达75年的年线、月线、日线乃至半小时线数据。他在道氏理论“潮汐与波浪”的启发下，震惊地发现看似混乱的股价波动竟然遵循着严格的分形嵌套结构，并于1938年出版《波浪原理》。",
+        firstPrinciples: "人类社会群体的乐观与悲观情绪在集体潜意识中遵循自然的斐波那契螺旋律动（黄金分割比率）。任何趋势推进都必须通过“三步进、两步退”的5浪结构释放动能，随后通过“三波折返”的3浪结构消化获利盘；且这一“5+3=8浪”模型具有跨时间周期的分形自相似性（大浪套小浪）。",
+        rules: [
+          "8浪基本循环结构：同向趋势由 1-2-3-4-5 五个驱动浪组成（1、3、5为推进浪，2、4为调整浪），逆向修正由 A-B-C 三个调整浪组成。",
+          "三条不可逾越的数浪铁律：①浪2回调绝对不能跌破浪1的起点；②浪3在1、3、5三个推进浪中绝对不能是最短的一浪（通常最长且成交量最大）；③浪4的回调低点绝对不能进入浪1的价格领地。",
+          "交替原则与斐波那契测算：若浪2为急促深幅调整，浪4通常为平缓横向盘整；浪3目标常为浪1的1.618倍，浪2回调常止步于0.5或0.618处。"
+        ],
+        limitations: "著名的“千人千浪”困境——由于调整浪存在锯齿形、平台形、三角形及双重/三重联合型等复杂变体，事后复盘数浪永远天衣无缝，但实盘左侧往往存在多种相互矛盾的替代数浪方案，容易让交易者陷入主观执念而忽视止损。",
+        books: ["《波浪原理》(1938 · R.N. Elliott)", "《艾略特波浪理论：市场行为的关键》(Frost & Prechter)"],
+        tags: ["五升三降", "分形自相似", "斐波那契比率", "延长浪"],
+        svgType: "elliott"
+      },
+      {
+        id: "gann",
+        year: "1900s–1950s",
+        sortYear: 1920,
+        era: "分支B · 时空几何对称派",
+        school: "structure",
+        accent: "emerald",
+        pos: { x: 800, y: 470 },
+        title: "江恩理论",
+        enTitle: "W.D. Gann Theory",
+        founder: "威廉·江恩 (W.D. Gann)",
+        summary: "在道氏理论之外引入“时间维度”，认为当时间周期与价格空间达到几何共振时，趋势必然反转。",
+        parents: ["dow"],
+        children: ["chart_patterns"],
+        origin: "20世纪初，威廉·江恩在华尔街创下了令人瞩目的实盘交易纪录（1909年《股票行情与投资文摘》现场监督其在25个交易日内进行286次交易、胜率高达92.3%）。他耗费十余年赴英国大英博物馆、埃及与印度研究古几何学、数理周期与天文历法，试图在价格之外引入“时间”作为预测市场转折的核心坐标。",
+        firstPrinciples: "“当时间与价格成四方形（共振）时，转折点即将到来。”市场不是孤立的价格数字，而是时间周期与价格空间交织的二维几何场。历史高点与低点蕴含着内在的振动频率，当未来运行的时间跨度与价格变动幅度达到特定几何比例（如45度均衡角或自然周期循环）时，旧趋势的能量必然耗尽并触发反转。",
+        rules: [
+          "江恩角度线（Gann Fan）：以重要高低点为原点，按时间与价格的特定比例绘制射线，其中 1x1线（45度角，代表1单位时间变动1单位价格）是牛熊分水岭，跌破1x1线则下探2x1线支撑。",
+          "50%回调生命线法则：任何大幅度的上涨或下跌，其50%中点位置都是最强有力的心理与资金均衡位，有效守住50%则原趋势延续。",
+          "江恩九方图（Square of Nine）：将自然数按顺时针螺旋排列在方阵中，利用十字线与对角线上的数字共振测算历史高点对应的未来压力与支撑价格。",
+          "时间周期循环：重点关注重要顶部/底部后的第7、14、21、30、45、60、90天及周年纪念日（Anniversary Dates）窗口期。"
+        ],
+        limitations: "理论体系掺杂了大量数理玄学与占星周期隐喻，且现代电子盘图表可随意缩放横纵坐标，导致“1单位时间对应多少价格波动率（Scale）”缺乏客观统一标准，在现代量化回测中极难标准化复现。",
+        books: ["《股票行情的真谛》(1923 · W.D. Gann)", "《华尔街四十五年》(1949 · W.D. Gann)"],
+        tags: ["时间与价格共振", "江恩角度线", "九方图", "50%回调法则"],
+        svgType: "gann"
+      },
+      {
+        id: "chart_patterns",
+        year: "1932–1948",
+        sortYear: 1948,
+        era: "分支B · 几何形态与供需边界",
+        school: "structure",
+        accent: "emerald",
+        pos: { x: 800, y: 630 },
+        title: "经典图表形态学",
+        enTitle: "Classical Chart Patterns",
+        founder: "沙巴克 / 爱德华兹 & 迈吉",
+        summary: "《股市趋势技术分析》集大成之作，将道氏趋势与酒田形态系统归纳为标准几何反转与整理形态。",
+        parents: ["dow", "sakata", "gann"],
+        children: ["sperandeo", "wilder_bollinger"],
+        origin: "1930年代，理查德·沙巴克（Richard Schabacker）首次将道氏理论从“大盘指数分析”下沉到“个股K线图表”；1948年，其妹夫罗伯特·爱德华兹与约翰·迈吉合著《股市趋势技术分析》（被誉为技术分析圣经），系统分类了十余种经典几何图表形态，正式确立了现代图表派技术分析的语言体系。",
+        firstPrinciples: "支撑位本质上是买方需求集中挂单的心理防线，阻力位则是卖方套牢盘与获利盘集中涌出的供给天花板。多空双方在特定区间反复博弈拉锯，会在图表上雕刻出对称或收敛的几何边界；一旦某一方彻底耗尽对手盘并伴随成交量放大突破颈线，价格将按照原有博弈区间的垂直高度等距释放能量。",
+        rules: [
+          "经典反转形态识别：头肩顶/底（左肩放量、头部创极值但量能背离、右肩无力创新高、放量跌破颈线确认）、双重顶/底（M头/W底）与圆弧底。",
+          "持续中继形态识别：对称三角形、上升/下降三角形、旗形与楔形（通常在趋势中段短暂蓄力，突破方向大概率延续原主趋势）。",
+          "最小量度跌幅/涨幅测算：从形态最高点到颈线的垂直距离（H），自颈线突破点向下/向上等距投射（H），作为第一目标位。",
+          "极性转换原则（Role Reversal）：被放量有效突破的阻力位，在随后的回踩（Throwback）中将转化为坚实的支撑位；反之亦然。"
+        ],
+        limitations: "由于《股市趋势技术分析》过于普及，所有散户都在同一根“颈线”上方挂突破追涨单、在下方挂止损单，现代机构算法专攻这些流动性密集区制造“假突破诱多（Bull Trap）”，导致传统形态突破的胜率大幅下降。",
+        books: ["《股市趋势技术分析》(1948 · Edwards & Magee)", "《股票市场理论与实践》(1930 · Richard Schabacker)"],
+        tags: ["头肩顶底", "双顶双底", "三角形整理", "支撑阻力互换"],
+        svgType: "chart_patterns"
+      },
+      {
+        id: "livermore",
+        year: "1920s–1940",
+        sortYear: 1923,
+        era: "分支C · 趋势投机与资金管理",
+        school: "trend",
+        accent: "rose",
+        pos: { x: 800, y: 790 },
+        title: "关键点与最小阻力线",
+        enTitle: "Livermore Pivotal Points",
+        founder: "杰西·利弗莫尔 (Jesse Livermore)",
+        summary: "从报价纸带（Tape Reading）实战中提炼出的趋势投机哲学，强调顺应最小阻力方向并让利润奔跑。",
+        parents: ["dow"],
+        children: ["donchian_turtle", "order_flow"],
+        origin: "1907年恐慌与1929年华尔街大崩盘中，传奇投机客杰西·利弗莫尔凭借对行情报价纸带（Ticker Tape）价格与成交速度的敏锐直觉，多次斩获数千万美元巨额利润。他一生不看K线图（当时尚无普及），而是用自创的“多栏数字账本”记录关键心理价位，在晚年著成《股票大作手操盘术》总结其一生实战心法。",
+        firstPrinciples: "“华尔街没有新鲜事，因为人性从未改变。”市场价格永远像水流一样沿着“最小阻力线（Line of Least Resistance）”运动。交易者绝不能主观猜测顶底，而应耐心等待多空决出胜负、价格放量冲破核心心理分水岭（关键点）的那一刻，顺势借力并利用复利加仓实现利润最大化。",
+        rules: [
+          "关键点（Pivotal Points）确认法：在强势上涨后的正常回调结束点、或突破历史整数关口/长期盘整高点时建仓，若突破后未能迅速脱离关键点则立即离场。",
+          "金字塔式分批加仓法：首仓试探（如20%计划仓位），只有当价格向有利方向推进、证明判断正确后才在更高价位逐步加码，严格遵循“只加浮盈仓、绝不摊平亏损单”。",
+          "时间要素（Time Element）与坐稳哲学：“让我赚大钱的从来不是我的思考，而是我的坐稳（Sitting Tight）。”只要未出现危险信号（如单日巨量长阴反转），绝不因小幅震荡提前下车。",
+          "领头羊板块聚焦：只做当期市场最活跃的领涨板块中的龙头股，摒弃弱势滞涨品种。"
+        ],
+        limitations: "高度依赖交易员个人的盘感与心理自控力，缺乏现代量化级别的固定止损公式与最大回撤硬约束，这导致利弗莫尔本人多次在情绪失控违背自身规则时遭遇重创。",
+        books: ["《股票大作手回忆录》(1923 · Edwin Lefèvre)", "《股票大作手操盘术》(1940 · Jesse Livermore)"],
+        tags: ["最小阻力线", "关键点突破", "金字塔加仓", "时间要素"],
+        svgType: "livermore"
+      },
+      {
+        id: "emh",
+        year: "1970",
+        sortYear: 1970,
+        era: "分支D · 现代金融学学院派",
+        school: "quant",
+        accent: "purple",
+        pos: { x: 800, y: 950 },
+        title: "有效市场假说",
+        enTitle: "Efficient Market Hypothesis (EMH)",
+        founder: "尤金·法玛 (Eugene Fama)",
+        summary: "继承巴舍利耶随机游走思想，宣称资产价格已瞬时反映所有已知信息，从而向传统技术分析发起正面挑战。",
+        parents: ["bachelier"],
+        children: ["behavioral_finance", "quant_statarb"],
+        origin: "1960年代，大型计算机开始进入大学金融实验室，芝加哥大学教授尤金·法玛通过海量股价时间序列检验发现，股票短期收益率几乎不存在显著的线性自相关性。1970年，他发表里程碑论文《有效资本市场：理论与实证研究回顾》，正式提出有效市场假说（并因此荣获2013年诺贝尔经济学奖），在学术界掀起了一场否定传统图表分析的风暴。",
+        firstPrinciples: "金融市场中聚集了无数敏锐的逐利机构与套利者，一旦某个价格模式或公开新闻存在无风险超额利润，套利资金会瞬间涌入并将其买高/卖低，直到利润空间归零。因此，任何时刻的市场价格都是该资产内在价值的“最优无偏估计”，只有完全不可预测的“未来新消息（News）”才能推动价格变动。",
+        rules: [
+          "三层市场效率边界：①弱式有效（价格已反映全部历史价量信息，传统K线与指标分析长期无法跑赢大盘）；②半强式有效（价格已反映全部公开财报与新闻，基本面选股亦难获超额收益）；③强式有效（内幕信息也已反映）。",
+          "被动指数化投资法则：既然主动择时与选股在扣除手续费后大概率跑输市场，普通投资者最优解是买入低费率宽基指数基金并长期持有。",
+          "逼迫交易界进化：EMH迫使严肃的量化基金放弃肉眼可见的简单图表规律，转向挖掘非线性微弱信号、跨市场统计套利与高频流动性提供。"
+        ],
+        limitations: "EMH建立在“所有投资者均绝对理性”与“套利无成本无限制”两大理想假设之上，完全无法解释1987年单日暴跌22%的黑色星期一、2000年互联网泡沫以及2008年次贷危机中资产价格严重偏离基本面的极端异象。",
+        books: ["《有效资本市场》(1970 · Eugene Fama)", "《漫步华尔街》(Burton Malkiel)"],
+        tags: ["弱式/半强/强式", "信息瞬时定价", "指数基金基石", "Alpha挑战"],
+        svgType: "emh"
+      },
+      {
+        id: "market_profile",
+        year: "1980s",
+        sortYear: 1984,
+        era: "分支A · 拍卖市场理论 (AMT)",
+        school: "microstructure",
+        accent: "cyan",
+        pos: { x: 1240, y: 80 },
+        title: "市场轮廓理论 (四度空间)",
+        enTitle: "Market Profile & Auction Market Theory",
+        founder: "彼得·斯泰德迈尔 (J. Peter Steidlmayer)",
+        summary: "将统计学正态分布钟形曲线引入期货交易，把市场还原为“双向连续拍卖”寻找公允价值的过程。",
+        parents: ["wyckoff"],
+        children: ["order_flow"],
+        origin: "1980年代初，芝加哥期货交易所（CBOT）资深的场内自营交易员彼得·斯泰德迈尔发现，传统的垂直K线图隐藏了价格在各个水平上“停留时间”与“成交接受度”的分布差异。他结合统计学正态分布钟形曲线与拍卖市场理论（Auction Market Theory），为CBOT开发了市场轮廓（Market Profile，华人交易界常译为“四度空间”）分析体系。",
+        firstPrinciples: "金融市场的本质是一个持续运转的双向拍卖场（Continuous Two-Way Auction）：价格向上拍卖（上涨）的唯一目的是寻找愿意抛售的卖家，直到买盘枯竭；价格向下拍卖（下跌）的目的是寻找愿意接盘的买家，直到卖盘枯竭。市场绝大部分时间都在买卖双方共同认可的“公允价值中枢”附近横向震荡，形成统计学正态分布的钟形轮廓。",
+        rules: [
+          "TPO（时间价格机会）字母堆叠：将交易日划分为每30分钟一个时段（A、B、C...），价格在某价位停留的时段越多，代表市场越认可该价格的公允性。",
+          "价值区（Value Area）与控制点（POC）：全天成交/停留最密集的价位称为 POC（Point of Control）；以POC为中心上下囊括70%交易量的区间（一个标准差）即为价值区（上沿VAH，下沿VAL）。",
+          "平衡日（Balance Day）与单边失衡日（Trend Day）策略：当开盘位于前一日价值区内且无新信息驱动时，采取“在VAH做空、在VAL做多、目标看POC”的均值回归策略；一旦放量带离价值区且无法拉回，则转为顺势单边跟踪。",
+          "单打印（Single Prints）与贫乏高低点（Poor High/Low）：缺乏时间停留的细长尾部代表机构快速扫货留下的失衡缺口，未来回踩极具支撑/阻力效应。"
+        ],
+        limitations: "原始Market Profile基于“时间停留（TPO）”而非真实成交手数统计，在现代电子高频交易时代，机构往往在极短时间内瞬间成交巨量，因此后来演化出更精准的成交量分布图（Volume Profile）与订单流足迹图。",
+        books: ["《市场与市场逻辑》(1989 · J. Peter Steidlmayer)", "《心智与市场 / Mind Over Markets》(James Dalton)"],
+        tags: ["价值区VAH/VAL", "控制点POC", "双向拍卖机制", "均衡与失衡"],
+        svgType: "market_profile"
+      },
+      {
+        id: "order_flow",
+        year: "2000s–至今",
+        sortYear: 2008,
+        era: "分支A · 终极微观颗粒度解析",
+        school: "microstructure",
+        accent: "cyan",
+        pos: { x: 1240, y: 245 },
+        title: "现代订单流与市场微观结构",
+        enTitle: "Order Flow, Footprint & Liquidity (ICT/SMC)",
+        founder: "现代做市商与高频微观结构学派",
+        summary: "直接穿透K线外壳，观察Level 2订单簿限价单与市价单（主动吃单）的实时撮合博弈与流动性失衡。",
+        parents: ["wyckoff", "market_profile", "livermore"],
+        children: [],
+        origin: "2000年以后，全球期货与股票市场全面电子化，Level 2 逐笔成交（Tick-by-Tick）与订单簿深度数据（DOM）向专业交易员开放。与此同时，机构高频算法彻底改变了传统图表形态的运行方式。现代微观结构学派（包括订单流足迹图 Footprint 与近年流行的 SMC/ICT 流动性概念）剥开K线的外壳，直接研究交易所撮合引擎底层的流动性博弈。",
+        firstPrinciples: "推动价格跳动一格（1 Tick）的唯一物理原因是“没有耐心的市价单（Aggressor）主动吃光了当前买一/卖一档位上的所有被动限价单（Liquidity）”。由于大型机构订单体量巨大，如果直接在盘口市价买入会导致严重滑点，因此机构算法必须故意将价格推向散户止损单密集的摆动高低点（流动性池），利用散户触发的市价止损单作为对手盘完成建仓。",
+        rules: [
+          "足迹图（Footprint Chart）失衡识别：精确拆解每根K线内部每个价位的 Bid（主动卖出成交量）与 Ask（主动买入成交量）；当某价位 Ask 成交量达到对角线 Bid 的300%以上时，形成“买方失衡（Buying Imbalance）”，构成强势支撑。",
+          "Delta 与吸收（Absorption）背离：Delta = 主动买入量 - 主动卖出量。当价格不断创出新低但累计 Delta 却拒绝下跌甚至翻红时，说明底部有巨量被动限价买单正在全盘“吸收”恐慌抛压，反转一触即发。",
+          "流动性扫荡（Liquidity Sweep）与公允价值缺口（FVG）：识别价格刺破前高/前低扫掉止损流动性后的迅速收回，结合机构单边扫单留下的三根K线价格真空区（FVG / Imbalance）进行回踩狙击。"
+        ],
+        limitations: "数据颗粒度极细、日内噪音极多，高度依赖高质量的未过滤Tick级数据源与高强度盯盘专注力；若脱离大周期（日线/4小时）趋势背景而盲目在1分钟图上沉迷微观失衡，极易“只见树木不见森林”。",
+        books: ["《交易与交易所：市场微观结构》(Larry Harris)", "《订单流交易实战 / Order Flow Trading Setups》"],
+        tags: ["足迹图Footprint", "主动买卖Delta", "流动性扫荡", "失衡区FVG"],
+        svgType: "order_flow"
+      },
+      {
+        id: "sperandeo",
+        year: "1991",
+        sortYear: 1991,
+        era: "分支B · 假突破与结构反转精炼",
+        school: "structure",
+        accent: "emerald",
+        pos: { x: 1240, y: 425 },
+        title: "1-2-3 与 2B 法则",
+        enTitle: "1-2-3 & 2B Pattern (Trader Vic)",
+        founder: "维克多·斯波朗迪 (Victor Sperandeo)",
+        summary: "在《专业投机原理》中把道氏理论与经典形态提炼为极简且可执行的趋势反转规则，尤其揭示了假突破的本质。",
+        parents: ["elliott", "chart_patterns"],
+        children: [],
+        origin: "1970至1980年代，华尔街著名基金经理维克多·斯波朗迪（绰号 Trader Vic，曾创下连续18年盈利、年均回报率超70%的骄人战绩）发现，传统道氏理论确认趋势反转过于迟缓，而经典形态突破又频繁遭遇假突破止损。1991年，他在名著《专业投机原理》中将道氏理论与结构形态提炼为极简且可量化的“1-2-3法则”与“2B法则”。",
+        firstPrinciples: "任何趋势的延续都依赖新增资金不断推动价格突破前高（或前低）。当市场情绪在趋势末端短暂刺破前高（吸引最后一批追突破买盘入场并打掉空头止损），却因为缺乏后续买盘承接而迅速跌回前高下方时，所有高位追多者瞬间陷入被套恐慌，其平仓止损盘将转化为推动价格反向暴跌的燃料。",
+        rules: [
+          "1-2-3 趋势反转三步曲：①价格有效突破主要上升/下降趋势线；②上升趋势中不再创出新高（或下降趋势中不再创出新低）；③价格向下跌破前一个次级低点（或向上突破前一个次级高点），满足全部三点即确认趋势反转。",
+          "2B 假突破早期狙击法则：在上升趋势中，价格短暂突破前高（第1个B点）但未能站稳，随后迅速跌破前高水平线（第2个B点），此时无需等待完整的1-2-3确认即可提前建立空单，止损仅需放在假突破最高点上方极窄处。",
+          "鳄鱼原则（Alligator Principle）止损纪律：如同被鳄鱼咬住一只脚，越挣扎被咬得越多，一旦触及预设止损点必须无条件斩仓，绝不幻想回本。"
+        ],
+        limitations: "趋势线的绘制存在一定主观连接标准；在无明确方向的宽幅震荡市道中，趋势线会被反复来回穿透，导致1-2-3法则出现连续小额止损磨损。",
+        books: ["《专业投机原理》(1991 · Victor Sperandeo)", "《专业投机原理 II》(1994 · Victor Sperandeo)"],
+        tags: ["趋势线突破", "2B假突破陷阱", "高盈亏比狙击", "胜率赔率管理"],
+        svgType: "sperandeo"
+      },
+      {
+        id: "donchian_turtle",
+        year: "1950s–1983",
+        sortYear: 1983,
+        era: "分支C · 机械化趋势跟踪系统",
+        school: "trend",
+        accent: "rose",
+        pos: { x: 1240, y: 605 },
+        title: "唐奇安通道与海龟交易法则",
+        enTitle: "Donchian Channel & Turtle Trading",
+        founder: "理查德·唐奇安 / 理查德·丹尼斯",
+        summary: "彻底剥离人类主观情绪，将利弗莫尔的突破思想转化为可编程的100%机械规则，证明伟大交易员可以被培养。",
+        parents: ["livermore"],
+        children: ["wilder_bollinger"],
+        origin: "1950年代，理查德·唐奇安首次提出基于规则的“四周（20日）突破法则”，被誉为“趋势跟踪之父”。1983年底，芝加哥商品交易传奇理查德·丹尼斯与合伙人威廉·埃克哈特进行了一场著名的赌局：“伟大的交易员究竟是天生注定，还是可以通过传授一套完全客观的机械规则培养出来？”丹尼斯招募了23名零基础普通人（海龟），仅用两周传授规则并在四年内赚取了超过1.75亿美元。",
+        firstPrinciples: "市场走势在短期内充满随机噪音，但受宏观基本面与群体羊群效应驱动，大级别单边趋势每隔一段时间必然爆发。由于人类天性厌恶小亏损并喜欢过早落袋为安，唯一能捕获百年一遇大行情的方法，就是彻底放弃主观预测，用一套正向数学期望的机械突破规则全覆盖所有潜在行情，并用波动率标准化仓位控制单笔风险。",
+        rules: [
+          "双系统通道突破入场：系统一为短周期（突破过去20日最高价买入、跌破10日最低价离场）；系统二为长周期防踏空（突破过去55日最高价买入、跌破20日最低价离场）。",
+          "N值（ATR）波动率头寸规模公式：计算品种20日平均真实波幅 N，令“1个单位头寸（1 Unit）每波动 1N 恰好等于账户总资金的 1%”，从而实现原油、国债、外汇等不同波动率资产的跨品种风险平价。",
+          "2N 硬止损与 0.5N 金字塔加仓：任何头寸一旦逆向波动 2N（即最大亏损账户2%）无条件止损；若顺向推进 0.5N 则加仓1个单位，单一市场最多叠加4个单位。"
+        ],
+        limitations: "典型的“低胜率（约35%～40%）+ 极高盈亏比”系统——在长达一两年的横向宽幅震荡市中，海龟系统会连续遭遇假突破止损，产生高达30%～50%的资金回撤，绝大多数普通人因心理崩溃而无法坚持到大趋势来临。",
+        books: ["《海龟交易法则》(2007 · Curtis Faith)", "《趋势跟踪》(Michael Covel)"],
+        tags: ["N日突破系统", "ATR波动率仓位", "100%机械执行", "截断亏损"],
+        svgType: "donchian_turtle"
+      },
+      {
+        id: "wilder_bollinger",
+        year: "1978–1980s",
+        sortYear: 1978,
+        era: "分支C · 价格衍生数学公式",
+        school: "trend",
+        accent: "rose",
+        pos: { x: 1240, y: 765 },
+        title: "现代技术指标与波动率派",
+        enTitle: "Technical Indicators (RSI, ATR, Bollinger)",
+        founder: "威尔斯·威尔德 / 约翰·布林格",
+        summary: "伴随个人电脑普及，将价格与成交量转化为标准化震荡指标与统计标准差通道，成为现代交易软件标配。",
+        parents: ["chart_patterns", "donchian_turtle"],
+        children: ["quant_statarb"],
+        origin: "1970年代末至1980年代，随着Apple II与IBM个人电脑走入交易室，交易员首次摆脱了手工绘制方格纸图的繁琐，能够实时计算复杂的滑动统计公式。1978年，机械工程师出身的威尔斯·威尔德出版《技术交易系统新概念》，一口气发明了 RSI、ATR、SAR 与 ADX 四大经典指标；随后约翰·布林格结合移动平均线与统计学标准差创造了布林带（Bollinger Bands）。",
+        firstPrinciples: "价格的变动不仅包含“方向”，还包含“速度（动量 Momentum）”与“离散程度（波动率 Volatility）”。一方面，市场动量具有物理惯性与均值回归双重特征——价格上涨速度过快（超买）往往意味着买方动能透支；另一方面，波动率具有明显的周期交替性——极度平静低波动（布林带收口）之后必然伴随剧烈的单边波动率扩张。",
+        rules: [
+          "RSI（相对强弱指数）动量与背离：度量过去14周期内上涨幅度与下跌幅度的比值（0–100）；高于70为超买区、低于30为超卖区；当价格创新高但RSI未能创新高时，构成高胜率“顶背离”预警。",
+          "布林带挤压（Bollinger Squeeze）爆发战法：中轨为20日均线，上下轨为 ±2倍标准差（囊括约95%价格波动）；当上下轨极度收窄至历史低位时，预示变盘在即，一旦放量突破上轨即顺势追进。",
+          "ATR（平均真实波幅）动态止损：剥离方向、纯度量市场每日实际跳动幅度，常用于设置“入场价 - 2×ATR”的跟踪止损（Chandelier Exit），避免被正常市场噪音洗出。"
+        ],
+        limitations: "几乎所有技术指标本质上都是历史价格的“滞后数学映射（Lagging Derivatives）”；在极强单边暴涨或暴跌行情中，RSI等震荡指标会长期死死钉在85以上（指标钝化），若机械执行“超买即做空”将面临灭顶之灾。",
+        books: ["《技术交易系统新概念》(1978 · J. Welles Wilder)", "《布林线 / Bollinger on Bollinger Bands》(2001 · John Bollinger)"],
+        tags: ["RSI动量强弱", "布林带挤压", "ATR真实波幅", "顶底背离"],
+        svgType: "wilder_bollinger"
+      },
+      {
+        id: "behavioral_finance",
+        year: "1979",
+        sortYear: 1979,
+        era: "分支D · 认知偏差与异象解释",
+        school: "quant",
+        accent: "purple",
+        pos: { x: 1240, y: 925 },
+        title: "行为金融学",
+        enTitle: "Behavioral Finance & Prospect Theory",
+        founder: "丹尼尔·卡尼曼 & 阿莫斯·特沃斯基",
+        summary: "用心理学实验击碎了有效市场假说的“绝对理性人”假设，从科学层面解释了为何技术分析与趋势动量长期有效。",
+        parents: ["emh"],
+        children: ["quant_statarb"],
+        origin: "1970年代，正当有效市场假说统治全球商学院之际，以色列心理学家丹尼尔·卡尼曼与阿莫斯·特沃斯基通过大量严谨的认知决策实验，于1979年发表划时代论文《前景理论：风险下的决策分析》（卡尼曼因此荣获2002年诺贝尔经济学奖），携手理查德·塞勒创立了行为金融学，揭示了人类在不确定性金融决策中的系统性心理偏差。",
+        firstPrinciples: "人脑在面对风险与收益时并非一台冷静计算期望值的计算机，而是受制于数百万年进化留下的情绪本能。心理学实验证明，人类遭受100元亏损时的痛苦强度，是获得100元盈利快乐强度的2.25倍（损失厌恶）。这种非对称价值函数导致亿万交易者集体犯下完全相同的错误，从而在宏观价格上制造出可被捕捉的“市场异象（Anomalies）”。",
+        rules: [
+          "处置效应（Disposition Effect）反向利用：散户天然倾向于“赚一点小钱就急于落袋（盈利时风险厌恶），被套亏损后却死扛不割肉（亏损时风险偏好）”，这导致利好公布后股价因散户过早抛售而上涨缓慢，形成可持续数月的“动量效应（Momentum）”。",
+          "锚定效应（Anchoring）与心理关口：交易者极易将自己的买入成本价、历史最高价或整数大关（如比特币10万美元）作为心理锚点，解释了为何历史前高与整数位天然形成强阻力/支撑。",
+          "羊群效应（Herding）与过度反应：在极端恐慌或狂热下，个体放弃独立判断盲目跟随群体，制造出远远偏离内在价值的泡沫与流动性踩踏，为逆向价值与均值回归交易提供丰厚赔率。"
+        ],
+        limitations: "行为金融学极其擅长从心理学底层解释“为什么市场会非理性”以及“为什么某些异象长期存在”，但它本身属于解释性学科，不直接输出具体的买点、卖点与仓位算法，必须结合量化因子模型才能落地实战。",
+        books: ["《思考，快与慢》(2011 · Daniel Kahneman)", "《非理性繁荣》(Robert Shiller)", "《助推 / Nudge》(Richard Thaler)"],
+        tags: ["前景理论", "损失厌恶", "处置效应", "羊群效应"],
+        svgType: "behavioral_finance"
+      },
+      {
+        id: "quant_statarb",
+        year: "1960s–至今",
+        sortYear: 1988,
+        era: "分支D · 数学优势与微观博弈巅峰",
+        school: "quant",
+        accent: "purple",
+        pos: { x: 1560, y: 680 },
+        title: "现代量化、统计套利与高频交易",
+        enTitle: "Quantitative, StatArb & HFT (Simons/Thorp)",
+        founder: "爱德华·索普 / 吉姆·西蒙斯 (文艺复兴)",
+        summary: "融合概率论、行为异象、微观订单流与超级算力，在海量历史与毫秒级盘口数据中挖掘非随机统计优势。",
+        parents: ["bachelier", "emh", "behavioral_finance", "wilder_bollinger"],
+        children: [],
+        origin: "1960年代，数学教授爱德华·索普将21点算牌法与凯利公式引入华尔街可转债套利，创立了史上首个量化对冲基金；1988年，世界级几何学家吉姆·西蒙斯组建文艺复兴科技公司（Renaissance Technologies），摒弃传统金融分析师，招募天体物理学家、密码破译专家与语音识别学者，打造出年化净回报高达39%的传奇大奖章基金，开启了现代算法与人工智能主导交易的新纪元。",
+        firstPrinciples: "彻底放弃对单笔交易胜负与宏观叙事的主观执念，转而把市场视为一个高维随机动态系统。通过在海量价格、盘口订单簿、财报与另类数据中挖掘成百上千个微弱但统计显著的微小概率优势（Edge，哪怕单笔胜率仅为51%），借助大数定律、市场中性对冲（剥离大盘系统性风险）与凯利公式最优复利杠杆，将微弱优势转化为极其平滑的资金增长曲线。",
+        rules: [
+          "凯利公式（Kelly Criterion）最优仓位管理：f* = (bp - q) / b（其中 p 为胜率，q 为败率，b 为赔率），在数学上严格锁定长期几何复利增长率最大化的最优下注比例，从根源上杜绝爆仓风险。",
+          "统计套利与配对交易（Pairs Trading）：寻找两只高度协整（Cointegrated）的相关资产（如可口可乐与百事可乐），当两者价差偏离历史均值超过 ±2个标准差（Z-Score）时，做空高估者、同时做多低估者，赚取价差均值回归利润。",
+          "多因子模型与机器学习信号：整合动量（Momentum）、价值（Value）、波动率、订单流不平衡度（Order Book Imbalance）等数百个正交因子动态打分选股。",
+          "高频做市（HFT Market Making）：利用微波通信与交易所机房托管（Co-location）以微秒级速度在买卖盘口同时挂单赚取买卖价差（Bid-Ask Spread）与流动性返佣。"
+        ],
+        limitations: "高度依赖海量清洗后的高质量数据、超低延迟硬件基础设施与顶尖数理人才的军备竞赛；且面临“Alpha衰减（策略被同行发现后迅速拥挤失效）”以及极端黑天鹅事件下历史相关性突然破裂（如2007年8月量化地震）的系统性风险。",
+        books: ["《战胜庄家 / 战胜市场》(Edward O. Thorp)", "《征服市场的人：吉姆·西蒙斯传》(Gregory Zuckerman)", "《打开量化投资的黑箱》(Rishi K Narang)"],
+        tags: ["凯利公式", "统计套利协整", "多因子Alpha", "微秒级高频"],
+        svgType: "quant_statarb"
+      }
+    ];
+
+    // =========================================================================
+    // 2. AUTOMATED DATA INTEGRITY VALIDATION & FALLBACK GUARANTEE
+    // =========================================================================
+    (function validateTheoriesDataset() {
+      const requiredFields = [
+        "id", "year", "era", "school", "title", "enTitle", "founder",
+        "summary", "parents", "children", "origin", "firstPrinciples",
+        "rules", "limitations", "books", "tags", "svgType"
+      ];
+      THEORIES.forEach((node, idx) => {
+        requiredFields.forEach(field => {
+          if (node[field] === undefined || node[field] === null) {
+            console.warn(`[Integrity Auto-Patch] Node #${idx} (${node.id || 'unknown'}) missing field "${field}". Applying fallback.`);
+            if (Array.isArray(node[field]) || ["parents", "children", "rules", "books", "tags"].includes(field)) {
+              node[field] = [];
+            } else {
+              node[field] = "暂无补充说明";
+            }
+          }
+        });
+        if (!Array.isArray(node.rules) || node.rules.length === 0) {
+          node.rules = ["核心规则待补充"];
+        }
+        if (!Array.isArray(node.books) || node.books.length === 0) {
+          node.books = ["相关经典文献"];
+        }
+      });
+    })();
+
+    const THEORY_MAP = Object.fromEntries(THEORIES.map(t => [t.id, t]));
+
+    // =========================================================================
+    // 3. 16 DEDICATED HIGH-CONTRAST SVG CONCEPTUAL SCHEMATICS
+    // =========================================================================
+    function getTheoryDiagramSVG(svgType) {
+      const diagrams = {
+        sakata: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">SAKATA (1755) · 阴阳博弈与三川/晨星反转结构</text>
+            <line x1="65" y1="36" x2="65" y2="98" stroke="#f43f5e" stroke-width="1.5"/>
+            <rect x="57" y="44" width="16" height="42" rx="2" fill="#f43f5e"/>
+            <line x1="115" y1="84" x2="115" y2="112" stroke="#f59e0b" stroke-width="1.5"/>
+            <rect x="108" y="95" width="14" height="5" rx="1" fill="#f59e0b"/>
+            <line x1="165" y1="34" x2="165" y2="94" stroke="#10b981" stroke-width="1.5"/>
+            <rect x="157" y="42" width="16" height="44" rx="2" fill="#10b981"/>
+            <path d="M185 64 L215 64" stroke="#06b6d4" stroke-dasharray="3 3"/>
+            <text x="220" y="57" fill="#e2e8f0" font-size="10">阴极生阳 · 情绪逆转</text>
+            <text x="220" y="74" fill="#94a3b8" font-size="9">OHLC四值记录多空力道</text>
+          </svg>`,
+        bachelier: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">BACHELIER (1900) · 随机游走(布朗运动)与正态分布</text>
+            <line x1="20" y1="68" x2="220" y2="68" stroke="#334155" stroke-dasharray="3 3"/>
+            <polyline points="20,68 45,56 70,76 95,48 120,64 145,42 170,82 195,58 215,66" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+            <path d="M235,108 Q255,108 268,68 Q281,28 294,68 Q307,108 325,108" fill="rgba(139,92,246,0.22)" stroke="#a78bfa" stroke-width="1.5"/>
+            <text x="242" y="119" fill="#94a3b8" font-size="8.5">期望值 E[ΔP]=0</text>
+          </svg>`,
+        dow: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">DOW THEORY · 主要趋势(潮汐)与次级折返(波浪)</text>
+            <line x1="25" y1="102" x2="310" y2="32" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <polyline points="25,102 88,64 120,84 192,42 225,62 300,26" fill="none" stroke="#f59e0b" stroke-width="2.2"/>
+            <circle cx="88" cy="64" r="3" fill="#06b6d4"/>
+            <circle cx="192" cy="42" r="3" fill="#06b6d4"/>
+            <text x="74" y="55" fill="#cbd5e1" font-size="9">HH</text>
+            <text x="178" y="34" fill="#cbd5e1" font-size="9">HH (确认突破)</text>
+            <text x="112" y="96" fill="#94a3b8" font-size="9">HL</text>
+            <text x="218" y="75" fill="#94a3b8" font-size="9">HL</text>
+          </svg>`,
+        wyckoff: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">WYCKOFF · 吸筹区间(Accumulation)与Spring弹簧震仓</text>
+            <rect x="35" y="46" width="195" height="44" fill="rgba(6,182,212,0.08)" stroke="#06b6d4" stroke-dasharray="3 3"/>
+            <polyline points="20,32 48,88 82,48 116,87 148,50 172,102 196,46 224,58 290,24" fill="none" stroke="#10b981" stroke-width="2"/>
+            <circle cx="172" cy="102" r="3.5" fill="#f43f5e"/>
+            <text x="145" y="116" fill="#fda4af" font-size="9">Spring (假跌破终极震仓)</text>
+            <text x="236" y="34" fill="#67e8f9" font-size="9">SOS 强势拉升</text>
+          </svg>`,
+        elliott: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">ELLIOTT WAVE · 5浪驱动 + 3浪调整分形循环</text>
+            <polyline points="20,102 58,70 80,86 144,32 168,54 208,24 240,60 262,46 305,78" fill="none" stroke="#10b981" stroke-width="2"/>
+            <text x="54" y="63" fill="#6ee7b7" font-size="9">1</text>
+            <text x="76" y="97" fill="#6ee7b7" font-size="9">2</text>
+            <text x="140" y="26" fill="#6ee7b7" font-size="9">3 (主升浪)</text>
+            <text x="165" y="66" fill="#6ee7b7" font-size="9">4</text>
+            <text x="206" y="19" fill="#6ee7b7" font-size="9">5</text>
+            <text x="237" y="72" fill="#fbbf24" font-size="9">A</text>
+            <text x="260" y="39" fill="#fbbf24" font-size="9">B</text>
+            <text x="303" y="89" fill="#fbbf24" font-size="9">C</text>
+          </svg>`,
+        gann: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">GANN FAN · 时间与价格几何角度线 (1x1 = 45°)</text>
+            <line x1="35" y1="106" x2="145" y2="25" stroke="#334155" stroke-width="1.2"/>
+            <line x1="35" y1="106" x2="220" y2="25" stroke="#10b981" stroke-width="1.8"/>
+            <line x1="35" y1="106" x2="300" y2="54" stroke="#334155" stroke-width="1.2"/>
+            <line x1="35" y1="106" x2="310" y2="85" stroke="#334155" stroke-width="1.2"/>
+            <polyline points="35,106 88,80 115,74 162,48 194,46 238,28" fill="none" stroke="#f59e0b" stroke-width="1.8"/>
+            <text x="226" y="32" fill="#34d399" font-size="9">1x1 时空均衡线</text>
+          </svg>`,
+        chart_patterns: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">CHART PATTERNS · 头肩顶(H&S)与颈线量度突破</text>
+            <line x1="30" y1="76" x2="295" y2="76" stroke="#f43f5e" stroke-dasharray="4 3"/>
+            <polyline points="25,98 65,52 92,76 138,28 184,76 212,54 244,76 284,108" fill="none" stroke="#10b981" stroke-width="2"/>
+            <text x="54" y="45" fill="#94a3b8" font-size="9">左肩</text>
+            <text x="128" y="23" fill="#e2e8f0" font-size="9">头部</text>
+            <text x="205" y="47" fill="#94a3b8" font-size="9">右肩</text>
+            <text x="252" y="70" fill="#fda4af" font-size="9">颈线跌破</text>
+          </svg>`,
+        livermore: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">LIVERMORE · 关键点(Pivotal Point)突破与金字塔加仓</text>
+            <line x1="25" y1="66" x2="310" y2="66" stroke="#f59e0b" stroke-dasharray="4 3"/>
+            <polyline points="25,96 68,68 98,86 142,66 174,52 208,42 265,24" fill="none" stroke="#f43f5e" stroke-width="2"/>
+            <circle cx="142" cy="66" r="3.5" fill="#f59e0b"/>
+            <circle cx="192" cy="46" r="3" fill="#10b981"/>
+            <text x="148" y="80" fill="#fcd34d" font-size="9">关键点突破(建首仓)</text>
+            <text x="202" y="46" fill="#6ee7b7" font-size="9">浮盈加仓</text>
+          </svg>`,
+        emh: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">EMH (1970) · 新信息瞬时定价脉冲 vs 滞后反应</text>
+            <line x1="102" y1="30" x2="102" y2="108" stroke="#8b5cf6" stroke-dasharray="3 3"/>
+            <text x="72" y="118" fill="#c4b5fd" font-size="8.5">利好新闻发布</text>
+            <polyline points="25,88 102,88 102,40 300,40" fill="none" stroke="#06b6d4" stroke-width="2"/>
+            <polyline points="102,88 170,66 240,48 300,40" fill="none" stroke="#64748b" stroke-dasharray="4 3" stroke-width="1.5"/>
+            <text x="150" y="34" fill="#67e8f9" font-size="9">有效市场：瞬间跳空一步定价</text>
+          </svg>`,
+        market_profile: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">MARKET PROFILE · TPO钟形价值区 (VAH / POC / VAL)</text>
+            <rect x="40" y="34" width="25" height="6" fill="#334155"/>
+            <rect x="40" y="43" width="58" height="6" fill="#06b6d4" opacity="0.6"/>
+            <rect x="40" y="52" width="102" height="6" fill="#06b6d4" opacity="0.8"/>
+            <rect x="40" y="61" width="138" height="7" fill="#f59e0b"/>
+            <rect x="40" y="71" width="96" height="6" fill="#06b6d4" opacity="0.8"/>
+            <rect x="40" y="80" width="52" height="6" fill="#06b6d4" opacity="0.6"/>
+            <rect x="40" y="89" width="22" height="6" fill="#334155"/>
+            <text x="186" y="67" fill="#fcd34d" font-size="9">POC (最公允价值中枢)</text>
+            <text x="150" y="48" fill="#67e8f9" font-size="8.5">VAH (70%价值区上沿)</text>
+            <text x="150" y="86" fill="#67e8f9" font-size="8.5">VAL (70%价值区下沿)</text>
+          </svg>`,
+        order_flow: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">ORDER FLOW · Footprint足迹图 (Bid x Ask 失衡与猎杀)</text>
+            <rect x="35" y="34" width="88" height="76" rx="4" fill="#0f172a" stroke="#06b6d4"/>
+            <text x="45" y="50" fill="#94a3b8" font-size="9" font-family="monospace">120  x  <tspan fill="#10b981" font-weight="bold">840!</tspan></text>
+            <text x="45" y="67" fill="#94a3b8" font-size="9" font-family="monospace">210  x  <tspan fill="#10b981" font-weight="bold">920!</tspan></text>
+            <text x="45" y="84" fill="#94a3b8" font-size="9" font-family="monospace">180  x  240</text>
+            <text x="45" y="101" fill="#fda4af" font-size="9" font-family="monospace">450! x   30</text>
+            <text x="138" y="56" fill="#6ee7b7" font-size="9">Ask 买盘失衡 (300%+ 主动扫货)</text>
+            <text x="138" y="76" fill="#cbd5e1" font-size="9">Delta = +1,070 (净主动买入)</text>
+            <text x="138" y="96" fill="#94a3b8" font-size="8.5">穿透K线表象，直视盘口撮合</text>
+          </svg>`,
+        sperandeo: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">TRADER VIC · 2B 假突破流动性陷阱狙击</text>
+            <line x1="40" y1="46" x2="295" y2="46" stroke="#94a3b8" stroke-dasharray="3 3"/>
+            <polyline points="30,98 98,46 140,74 192,33 220,58 280,100" fill="none" stroke="#10b981" stroke-width="2"/>
+            <circle cx="192" cy="33" r="3.5" fill="#f43f5e"/>
+            <circle cx="210" cy="46" r="3.5" fill="#f59e0b"/>
+            <text x="168" y="26" fill="#fda4af" font-size="9">刺破前高(诱多)</text>
+            <text x="220" y="44" fill="#fcd34d" font-size="9">2B确认做空点</text>
+          </svg>`,
+        donchian_turtle: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">TURTLE TRADING · 20日唐奇安通道突破系统</text>
+            <polyline points="25,52 152,52 175,36 305,36" fill="none" stroke="#06b6d4" stroke-width="1.5"/>
+            <polyline points="25,96 195,96 225,76 305,76" fill="none" stroke="#64748b" stroke-width="1.2"/>
+            <polyline points="25,76 68,60 110,86 155,51 205,38 275,39" fill="none" stroke="#f43f5e" stroke-width="2"/>
+            <circle cx="155" cy="51" r="3.5" fill="#10b981"/>
+            <text x="162" y="65" fill="#6ee7b7" font-size="9">突破20日高点买入 (2N止损)</text>
+          </svg>`,
+        wilder_bollinger: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">BOLLINGER & RSI · 布林带挤压(Squeeze)与开口爆发</text>
+            <path d="M25,35 Q100,58 155,58 Q215,58 305,24" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+            <path d="M25,98 Q100,74 155,74 Q215,74 305,108" fill="none" stroke="#f43f5e" stroke-width="1.5"/>
+            <polyline points="25,66 90,65 155,66 205,48 285,30" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+            <text x="115" y="90" fill="#fda4af" font-size="9">极低波动收口</text>
+            <text x="225" y="54" fill="#6ee7b7" font-size="9">开口趋势爆发</text>
+          </svg>`,
+        behavioral_finance: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">PROSPECT THEORY · 前景理论S型非对称价值曲线</text>
+            <line x1="170" y1="30" x2="170" y2="112" stroke="#334155"/>
+            <line x1="35" y1="66" x2="305" y2="66" stroke="#334155"/>
+            <path d="M170,66 Q225,42 295,38" fill="none" stroke="#10b981" stroke-width="2.2"/>
+            <path d="M170,66 Q132,98 65,108" fill="none" stroke="#f43f5e" stroke-width="2.2"/>
+            <text x="210" y="33" fill="#6ee7b7" font-size="8.5">盈利快感边际递减</text>
+            <text x="42" y="94" fill="#fda4af" font-size="8.5">亏损痛苦 2.25x 陡峭</text>
+          </svg>`,
+        quant_statarb: `
+          <svg viewBox="0 0 340 128" class="w-full h-32 rounded-xl bg-slate-950/90 border border-slate-800">
+            <text x="14" y="20" fill="#94a3b8" font-size="10" font-family="monospace">STAT-ARB · 配对交易价差均值回归 (Z-Score ±2σ)</text>
+            <line x1="25" y1="42" x2="310" y2="42" stroke="#f43f5e" stroke-dasharray="3 3"/>
+            <line x1="25" y1="69" x2="310" y2="69" stroke="#64748b"/>
+            <line x1="25" y1="96" x2="310" y2="96" stroke="#10b981" stroke-dasharray="3 3"/>
+            <polyline points="25,69 68,40 112,69 156,98 200,69 244,41 288,69" fill="none" stroke="#a855f7" stroke-width="2"/>
+            <text x="245" y="35" fill="#fda4af" font-size="8.5">+2σ 做空价差</text>
+            <text x="245" y="109" fill="#6ee7b7" font-size="8.5">-2σ 做多价差</text>
+          </svg>`
+      };
+      return diagrams[svgType] || diagrams.dow;
+    }
+
+    // =========================================================================
+    // 4. APPLICATION STATE & STYLING TOKENS
+    // =========================================================================
+    let state = {
+      selectedId: "dow",
+      hoveredId: null,
+      activeFilter: "all",
+      searchQuery: "",
+      viewMode: "tree", // 'tree' | 'timeline'
+      zoom: 0.85,
+      panX: 24,
+      panY: 24,
+      isDragging: false,
+      hasDraggedBeyondThreshold: false,
+      pointerDownX: 0,
+      pointerDownY: 0,
+      dragStartX: 0,
+      dragStartY: 0,
+      lastSelectTimestamp: 0,
+      mobileDrawerOpen: false
+    };
+
+    const ACCENT_STYLES = {
+      amber: {
+        border: "border-amber-500/40",
+        activeBorder: "border-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.35)]",
+        badge: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+        dot: "bg-amber-400",
+        stroke: "#f59e0b",
+        marker: "url(#arrow-amber)"
+      },
+      cyan: {
+        border: "border-cyan-500/40",
+        activeBorder: "border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)]",
+        badge: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+        dot: "bg-cyan-400",
+        stroke: "#06b6d4",
+        marker: "url(#arrow-cyan)"
+      },
+      emerald: {
+        border: "border-emerald-500/40",
+        activeBorder: "border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.35)]",
+        badge: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+        dot: "bg-emerald-400",
+        stroke: "#10b981",
+        marker: "url(#arrow-emerald)"
+      },
+      rose: {
+        border: "border-rose-500/40",
+        activeBorder: "border-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.35)]",
+        badge: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+        dot: "bg-rose-400",
+        stroke: "#f43f5e",
+        marker: "url(#arrow-rose)"
+      },
+      purple: {
+        border: "border-purple-500/40",
+        activeBorder: "border-purple-400 shadow-[0_0_25px_rgba(139,92,246,0.35)]",
+        badge: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+        dot: "bg-purple-400",
+        stroke: "#8b5cf6",
+        marker: "url(#arrow-purple)"
+      }
+    };
+
+    // =========================================================================
+    // 5. STAGE TRANSFORM, LINEAGE TRAVERSAL & SEARCH FILTERING
+    // =========================================================================
+    function updateStageTransform() {
+      const stage = document.getElementById("treeStage");
+      const zoomText = document.getElementById("zoomLevelText");
+      if (stage) {
+        stage.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+      }
+      if (zoomText) {
+        zoomText.textContent = `${Math.round(state.zoom * 100)}%`;
+      }
+    }
+
+    function getLineageSet(focusId) {
+      if (!focusId || !THEORY_MAP[focusId]) return null;
+      const relatedNodes = new Set([focusId]);
+      const relatedEdges = new Set();
+
+      function walkUp(currId) {
+        const node = THEORY_MAP[currId];
+        if (!node) return;
+        node.parents.forEach(pId => {
+          relatedNodes.add(pId);
+          relatedEdges.add(`${pId}->${currId}`);
+          walkUp(pId);
+        });
+      }
+
+      function walkDown(currId) {
+        const node = THEORY_MAP[currId];
+        if (!node) return;
+        node.children.forEach(cId => {
+          relatedNodes.add(cId);
+          relatedEdges.add(`${currId}->${cId}`);
+          walkDown(cId);
+        });
+      }
+
+      walkUp(focusId);
+      walkDown(focusId);
+      return { nodes: relatedNodes, edges: relatedEdges };
+    }
+
+    function matchesFilterAndSearch(theory) {
+      const matchSchool = state.activeFilter === "all" || theory.school === state.activeFilter;
+      if (!matchSchool) return false;
+      if (!state.searchQuery.trim()) return true;
+      const q = state.searchQuery.trim().toLowerCase();
+      return (
+        theory.title.toLowerCase().includes(q) ||
+        theory.enTitle.toLowerCase().includes(q) ||
+        theory.founder.toLowerCase().includes(q) ||
+        theory.year.toLowerCase().includes(q) ||
+        theory.summary.toLowerCase().includes(q) ||
+        theory.origin.toLowerCase().includes(q) ||
+        theory.firstPrinciples.toLowerCase().includes(q) ||
+        theory.tags.some(t => t.toLowerCase().includes(q)) ||
+        theory.rules.some(r => r.toLowerCase().includes(q)) ||
+        theory.books.some(b => b.toLowerCase().includes(q))
+      );
+    }
+
+    // =========================================================================
+    // 6. DOM RENDERING FUNCTIONS
+    // =========================================================================
+    function renderFilterBar() {
+      const bar = document.getElementById("filterBar");
+      bar.innerHTML = LINEAGES.map(item => {
+        const isActive = state.activeFilter === item.id;
+        return `
+          <button 
+            type="button"
+            onclick="setFilter('${item.id}')"
+            class="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition flex items-center gap-1.5 ${
+              isActive 
+                ? item.badgeClass + " shadow-sm ring-1 ring-white/20" 
+                : "bg-obsidian/70 text-slate-400 border-borderSubtle hover:text-slate-200 hover:border-slate-700"
+            }">
+            <span class="w-1.5 h-1.5 rounded-full ${isActive ? "bg-current" : "bg-slate-600"}"></span>
+            <span>${item.label}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderConnectionsSVG() {
+      const edgesGroup = document.getElementById("edgesGroup");
+      if (!edgesGroup) return;
+
+      const focusId = state.hoveredId || state.selectedId;
+      const lineage = getLineageSet(focusId);
+
+      // Measure actual rendered card dimensions for pixel-accurate Bezier anchors
+      const fallbackW = 268;
+      const fallbackH = 136;
+
+      let edgesHtml = "";
+      THEORIES.forEach(parent => {
+        const parentEl = document.querySelector(`[data-node-id="${parent.id}"]`);
+        const pW = parentEl ? parentEl.offsetWidth : fallbackW;
+        const pH = parentEl ? parentEl.offsetHeight : fallbackH;
+
+        parent.children.forEach(childId => {
+          const child = THEORY_MAP[childId];
+          if (!child) return;
+
+          const childEl = document.querySelector(`[data-node-id="${child.id}"]`);
+          const cH = childEl ? childEl.offsetHeight : fallbackH;
+
+          const edgeKey = `${parent.id}->${child.id}`;
+          const isHighlighted = lineage && lineage.edges.has(edgeKey);
+          const parentVisible = matchesFilterAndSearch(parent);
+          const childVisible = matchesFilterAndSearch(child);
+          const isDimmed = (!parentVisible && !childVisible) || (lineage && !isHighlighted);
+
+          const x1 = parent.pos.x + pW;
+          const y1 = parent.pos.y + pH / 2;
+          const x2 = child.pos.x;
+          const y2 = child.pos.y + cH / 2;
+          const dx = Math.max(64, (x2 - x1) * 0.48);
+
+          const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+          const accent = ACCENT_STYLES[child.accent] || ACCENT_STYLES.cyan;
+
+          edgesHtml += `
+            <path 
+              d="${d}" 
+              fill="none" 
+              stroke="${isHighlighted ? accent.stroke : "#475569"}" 
+              stroke-width="${isHighlighted ? 2.6 : 1.5}"
+              stroke-opacity="${isDimmed ? 0.16 : isHighlighted ? 0.95 : 0.6}"
+              marker-end="${isHighlighted ? accent.marker : "url(#arrow-default)"}"
+              class="${isHighlighted ? "edge-active" : ""} transition-opacity duration-200"
+            />
+          `;
+        });
+      });
+      edgesGroup.innerHTML = edgesHtml;
+    }
+
+    function renderTreeAndEdges() {
+      const nodesLayer = document.getElementById("nodesLayer");
+      const focusId = state.hoveredId || state.selectedId;
+      const lineage = getLineageSet(focusId);
+      const CARD_W = 268;
+
+      nodesLayer.innerHTML = THEORIES.map(t => {
+        const isSelected = state.selectedId === t.id;
+        const isInLineage = lineage && lineage.nodes.has(t.id);
+        const matches = matchesFilterAndSearch(t);
+        const accent = ACCENT_STYLES[t.accent] || ACCENT_STYLES.cyan;
+
+        let opacityClass = "opacity-100";
+        if (!matches) {
+          opacityClass = "opacity-20 grayscale";
+        } else if (lineage && !isInLineage) {
+          opacityClass = "opacity-45";
+        }
+
+        return `
+          <div 
+            data-theory-id="${t.id}"
+            data-node-id="${t.id}"
+            style="left: ${t.pos.x}px; top: ${t.pos.y}px; width: ${CARD_W}px;"
+            class="node-card absolute rounded-2xl bg-card/95 border p-3.5 select-none ${opacityClass} ${
+              isSelected 
+                ? accent.activeBorder + " selected bg-cardHover ring-1 ring-white/20" 
+                : isInLineage 
+                  ? accent.border + " bg-cardHover/85" 
+                  : "border-borderSubtle hover:border-slate-500"
+            }">
+            <div class="flex items-center justify-between gap-2 mb-1.5 pointer-events-none">
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded-md border ${accent.badge}">
+                ${t.year}
+              </span>
+              <span class="text-[10px] text-slate-400 truncate max-w-[140px]">
+                ${t.founder.split("(")[0].trim()}
+              </span>
+            </div>
+            <h3 class="text-sm font-bold text-white leading-snug tracking-tight pointer-events-none">
+              ${t.title}
+            </h3>
+            <p class="text-[11px] font-mono text-slate-400 truncate mt-0.5 pointer-events-none">
+              ${t.enTitle}
+            </p>
+            <div class="flex flex-wrap gap-1 mt-2.5 pointer-events-none">
+              ${t.tags.slice(0, 3).map(tag => `
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800/90 text-slate-300 border border-slate-700/70">
+                  ${tag}
+                </span>
+              `).join("")}
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] pointer-events-none">
+              <span class="text-slate-500 font-mono">${t.school.toUpperCase()}</span>
+              <span data-role="card-status" class="inline-flex items-center gap-1 font-medium ${isSelected ? "text-cyan-300" : "text-emerald-400/90"}">
+                <span data-role="card-dot" class="w-1.5 h-1.5 rounded-full ${isSelected ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"}"></span>
+                <span data-role="card-label">${isSelected ? "正在查看详解" : "点击查看6维详解 →"}</span>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      requestAnimationFrame(renderConnectionsSVG);
+    }
+
+    function syncCardSelectionClassesInPlace() {
+      const focusId = state.hoveredId || state.selectedId;
+      const lineage = getLineageSet(focusId);
+
+      document.querySelectorAll("#nodesLayer [data-theory-id]").forEach(el => {
+        const id = el.getAttribute("data-theory-id");
+        const t = THEORY_MAP[id];
+        if (!t) return;
+        const isSelected = state.selectedId === id;
+        const isInLineage = lineage && lineage.nodes.has(id);
+        const matches = matchesFilterAndSearch(t);
+        const accent = ACCENT_STYLES[t.accent] || ACCENT_STYLES.cyan;
+
+        let opacityClass = "opacity-100";
+        if (!matches) {
+          opacityClass = "opacity-20 grayscale";
+        } else if (lineage && !isInLineage) {
+          opacityClass = "opacity-45";
+        }
+
+        el.className = `node-card absolute rounded-2xl bg-card/95 border p-3.5 select-none ${opacityClass} ${
+          isSelected
+            ? accent.activeBorder + " selected bg-cardHover ring-1 ring-white/20"
+            : isInLineage
+              ? accent.border + " bg-cardHover/85"
+              : "border-borderSubtle hover:border-slate-500"
+        }`;
+
+        const statusEl = el.querySelector('[data-role="card-status"]');
+        const dotEl = el.querySelector('[data-role="card-dot"]');
+        const labelEl = el.querySelector('[data-role="card-label"]');
+        if (statusEl) {
+          statusEl.className = `inline-flex items-center gap-1 font-medium ${isSelected ? "text-cyan-300" : "text-emerald-400/90"}`;
+        }
+        if (dotEl) {
+          dotEl.className = `w-1.5 h-1.5 rounded-full ${isSelected ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"}`;
+        }
+        if (labelEl) {
+          labelEl.textContent = isSelected ? "正在查看详解" : "点击查看6维详解 →";
+        }
+      });
+
+      document.querySelectorAll("#timelineList [data-theory-id]").forEach(el => {
+        const id = el.getAttribute("data-theory-id");
+        const t = THEORY_MAP[id];
+        if (!t) return;
+        const isSelected = state.selectedId === id;
+        const accent = ACCENT_STYLES[t.accent] || ACCENT_STYLES.cyan;
+        el.className = `rounded-2xl bg-card border p-4 cursor-pointer transition hover:bg-cardHover ${
+          isSelected ? accent.activeBorder + " selected" : "border-borderSubtle"
+        }`;
+      });
+
+      requestAnimationFrame(renderConnectionsSVG);
+    }
+
+    function renderTimelineView() {
+      const list = document.getElementById("timelineList");
+      const sorted = [...THEORIES]
+        .filter(matchesFilterAndSearch)
+        .sort((a, b) => a.sortYear - b.sortYear);
+
+      if (sorted.length === 0) {
+        list.innerHTML = `
+          <div class="p-8 rounded-2xl bg-card border border-borderSubtle text-center text-sm text-slate-400">
+            未找到匹配的交易理论，请尝试清空搜索关键词或切换全部流派。
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = sorted.map(t => {
+        const isSelected = state.selectedId === t.id;
+        const accent = ACCENT_STYLES[t.accent] || ACCENT_STYLES.cyan;
+        return `
+          <div class="relative pl-6 sm:pl-8">
+            <span class="absolute -left-[9px] top-5 w-4 h-4 rounded-full border-4 border-obsidian ${accent.dot}"></span>
+            <div 
+              data-theory-id="${t.id}"
+              class="rounded-2xl bg-card border p-4 cursor-pointer transition hover:bg-cardHover ${
+                isSelected ? accent.activeBorder + " selected" : "border-borderSubtle"
+              }">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono px-2 py-0.5 rounded-md border ${accent.badge}">${t.year}</span>
+                  <span class="text-xs text-slate-400">${t.era}</span>
+                </div>
+                <span class="text-xs font-medium text-slate-300">${t.founder}</span>
+              </div>
+              <h3 class="text-base font-bold text-white">${t.title} <span class="text-xs font-mono font-normal text-slate-400 ml-1">${t.enTitle}</span></h3>
+              <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">${t.summary}</p>
+              <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-800/80 text-[11px]">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="text-slate-500">继承自：</span>
+                  ${t.parents.length 
+                    ? t.parents.map(pid => `<span class="px-2 py-0.5 rounded bg-slate-800 text-cyan-300">${THEORY_MAP[pid]?.title || pid}</span>`).join("")
+                    : `<span class="text-amber-400/90">原始独立发端</span>`
+                  }
+                </div>
+                <span class="text-emerald-400 font-medium">查看完整6维详解 →</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderDetailInspector() {
+      const panel = document.getElementById("detailPanel");
+      const currentIndex = Math.max(0, THEORIES.findIndex(item => item.id === state.selectedId));
+      const t = THEORIES[currentIndex] || THEORY_MAP["dow"];
+      const prevTheory = THEORIES[(currentIndex - 1 + THEORIES.length) % THEORIES.length];
+      const nextTheory = THEORIES[(currentIndex + 1) % THEORIES.length];
+      const accent = ACCENT_STYLES[t.accent] || ACCENT_STYLES.cyan;
+
+      const parentButtons = t.parents.length
+        ? t.parents.map(pid => {
+            const p = THEORY_MAP[pid];
+            if (!p) return "";
+            return `<button type="button" onclick="selectNode('${pid}', true)" class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-cyan-500/20 text-xs text-cyan-300 border border-slate-700 hover:border-cyan-500/50 transition flex items-center gap-1">
+              <span>←</span><span>${p.title}</span>
+            </button>`;
+          }).join("")
+        : `<span class="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg">★ 历史独立源头</span>`;
+
+      const childButtons = t.children.length
+        ? t.children.map(cid => {
+            const c = THEORY_MAP[cid];
+            if (!c) return "";
+            return `<button type="button" onclick="selectNode('${cid}', true)" class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-emerald-500/20 text-xs text-emerald-300 border border-slate-700 hover:border-emerald-500/50 transition flex items-center gap-1">
+              <span>${c.title}</span><span>→</span>
+            </button>`;
+          }).join("")
+        : `<span class="text-xs text-slate-400 bg-slate-800/60 px-2.5 py-1 rounded-lg">当代前沿演进节点</span>`;
+
+      const quickSelectOptions = THEORIES.map((item, idx) => `
+        <option value="${item.id}" ${item.id === t.id ? "selected" : ""}>
+          ${String(idx + 1).padStart(2, "0")}. ${item.title} (${item.year})
+        </option>
+      `).join("");
+
+      panel.scrollTop = 0;
+
+      panel.innerHTML = `
+        <div id="inspectorContentBody" class="p-5 sm:p-6 space-y-5 panel-refresh-anim">
+          <!-- Mobile Drawer Close Bar -->
+          <div class="flex lg:hidden items-center justify-between pb-2 border-b border-slate-800">
+            <span class="text-xs font-mono text-cyan-400">THEORY INSPECTOR · 节点 ${currentIndex + 1} / ${THEORIES.length}</span>
+            <button type="button" onclick="closeMobileDrawer()" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs">
+              收起面板 ✕
+            </button>
+          </div>
+
+          <!-- Top Theory Navigation & Quick Switcher -->
+          <div class="rounded-xl bg-obsidian/95 border border-slate-800 p-2.5 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <button 
+                type="button" 
+                onclick="selectNode('${prevTheory.id}', true)" 
+                title="切换到：${prevTheory.title}"
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700/80 transition flex items-center gap-1">
+                <span>← 上一个理论</span>
+              </button>
+              <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                节点 ${currentIndex + 1} / ${THEORIES.length}
+              </span>
+              <button 
+                type="button" 
+                onclick="selectNode('${nextTheory.id}', true)" 
+                title="切换到：${nextTheory.title}"
+                class="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700/80 transition flex items-center gap-1">
+                <span>下一个理论 →</span>
+              </button>
+            </div>
+            <select 
+              aria-label="快速切换交易理论"
+              onchange="selectNode(this.value, true)"
+              class="w-full bg-slate-900 border border-slate-700/80 focus:border-cyan-500/70 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none cursor-pointer">
+              ${quickSelectOptions}
+            </select>
+          </div>
+
+          <!-- Header Meta -->
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+              <span class="text-xs font-mono px-2.5 py-0.5 rounded-full border ${accent.badge}">
+                ${t.year} · ${t.era}
+              </span>
+              <span class="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
+                ✓ 6维深度全解析
+              </span>
+            </div>
+            <h2 class="text-xl font-bold text-white tracking-tight">${t.title}</h2>
+            <p class="text-xs font-mono text-slate-400 mt-0.5">${t.enTitle}</p>
+            <div class="mt-2.5 flex items-center gap-2 text-xs text-slate-300">
+              <span class="text-slate-500">核心创始人：</span>
+              <span class="font-semibold text-white">${t.founder}</span>
+            </div>
+          </div>
+
+          <!-- Module 0: Genealogy Lineage Links -->
+          <div class="rounded-xl bg-obsidian/90 border border-borderSubtle p-3.5 space-y-2.5">
+            <div>
+              <div class="text-[11px] text-slate-400 mb-1.5">上游继承自 (点击回溯源头)：</div>
+              <div class="flex flex-wrap gap-1.5">${parentButtons}</div>
+            </div>
+            <div class="border-t border-slate-800/80 pt-2.5">
+              <div class="text-[11px] text-slate-400 mb-1.5">下游衍生出 (点击顺藤摸瓜)：</div>
+              <div class="flex flex-wrap gap-1.5">${childButtons}</div>
+            </div>
+          </div>
+
+          <!-- Conceptual SVG Schematic -->
+          <div>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+              <span>核心结构原理示意图 · SCHEMATIC</span>
+              <span class="text-cyan-400/80">VECTOR DIAGRAM</span>
+            </div>
+            ${getTheoryDiagramSVG(t.svgType)}
+          </div>
+
+          <!-- Module 01: Origin & Historical Background -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 font-mono text-[10px]">01</span>
+              <span>核心起源与历史背景</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80">
+              ${t.origin}
+            </p>
+          </div>
+
+          <!-- Module 02: First Principles -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-1.5 flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 font-mono text-[10px]">02</span>
+              <span>底层第一性原理 (为什么有效？)</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-200 leading-relaxed bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/25">
+              ${t.firstPrinciples}
+            </p>
+          </div>
+
+          <!-- Module 03: Practical Rules & Key Structures -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2 flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 font-mono text-[10px]">03</span>
+              <span>核心实战规则与关键结构</span>
+            </h3>
+            <ul class="space-y-2">
+              ${t.rules.map(item => `
+                <li class="text-xs sm:text-sm text-slate-300 leading-relaxed flex items-start gap-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800/70">
+                  <span class="text-emerald-400 mt-0.5 font-bold">▸</span>
+                  <span>${item}</span>
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+
+          <!-- Module 04: Historical Limitations & Evolutionary Catalyst -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 mb-1.5 flex items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 font-mono text-[10px]">04</span>
+              <span>历史局限性与演化动因 (为何催生下一代？)</span>
+            </h3>
+            <div class="text-xs sm:text-sm text-rose-100/90 leading-relaxed bg-rose-500/10 border border-rose-500/25 p-3.5 rounded-xl">
+              ${t.limitations}
+            </div>
+          </div>
+
+          <!-- Module 05: Classic Books & Core Terminology -->
+          <div class="pt-2 border-t border-slate-800/90 space-y-3">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-purple-400 mb-2 flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded bg-purple-500/15 border border-purple-500/30 font-mono text-[10px]">05</span>
+                <span>代表经典原著</span>
+              </h3>
+              <div class="flex flex-wrap gap-1.5">
+                ${t.books.map(book => `
+                  <span class="text-xs px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-200 border border-purple-500/30">
+                    📖 ${book}
+                  </span>
+                `).join("")}
+              </div>
+            </div>
+            <div>
+              <div class="text-[11px] text-slate-400 mb-1.5">核心术语索引：</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${t.tags.map(tag => `
+                  <span class="text-[11px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+                    #${tag}
+                  </span>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function syncResponsiveDrawerVisibility() {
+      const panel = document.getElementById("detailPanel");
+      const backdrop = document.getElementById("mobileDrawerBackdrop");
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop) {
+        panel.classList.remove("translate-y-full");
+        backdrop.classList.add("hidden");
+      } else {
+        if (state.mobileDrawerOpen) {
+          panel.classList.remove("translate-y-full");
+          backdrop.classList.remove("hidden");
+        } else {
+          panel.classList.add("translate-y-full");
+          backdrop.classList.add("hidden");
+        }
+      }
+    }
+
+    window.closeMobileDrawer = function() {
+      state.mobileDrawerOpen = false;
+      syncResponsiveDrawerVisibility();
+    };
+
+    function renderAll() {
+      renderFilterBar();
+      renderTreeAndEdges();
+      renderTimelineView();
+      renderDetailInspector();
+      updateStageTransform();
+      syncResponsiveDrawerVisibility();
+    }
+
+    // =========================================================================
+    // 7. BULLETPROOF EVENT DELEGATION & INTERACTIVE HANDLERS
+    // =========================================================================
+    function triggerDelegatedSelection(targetEl) {
+      const card = targetEl.closest("[data-theory-id]");
+      if (!card) return;
+      const id = card.getAttribute("data-theory-id");
+      if (!id || !THEORY_MAP[id]) return;
+
+      const now = Date.now();
+      if (now - state.lastSelectTimestamp < 120 && state.selectedId === id) {
+        return;
+      }
+      state.lastSelectTimestamp = now;
+      selectNode(id, true);
+    }
+
+    window.selectNode = function(id, openDrawerOnMobile = true) {
+      if (!THEORY_MAP[id]) return;
+      state.selectedId = id;
+      if (openDrawerOnMobile && window.innerWidth < 1024) {
+        state.mobileDrawerOpen = true;
+      }
+      syncCardSelectionClassesInPlace();
+      renderDetailInspector();
+      syncResponsiveDrawerVisibility();
+
+      // Smoothly pan node into comfortable view if in tree mode
+      if (state.viewMode === "tree") {
+        const container = document.getElementById("treeContainer");
+        const node = THEORY_MAP[id];
+        if (container && node) {
+          const targetScreenX = container.clientWidth * 0.42;
+          const targetScreenY = container.clientHeight * 0.45;
+          state.panX = targetScreenX - (node.pos.x + 134) * state.zoom;
+          state.panY = targetScreenY - (node.pos.y + 68) * state.zoom;
+          updateStageTransform();
+        }
+      }
+    };
+
+    window.hoverNode = function(id) {
+      state.hoveredId = id;
+      syncCardSelectionClassesInPlace();
+    };
+
+    window.setFilter = function(filterId) {
+      state.activeFilter = filterId;
+      renderAll();
+    };
+
+    function resetCameraToCenter() {
+      const container = document.getElementById("treeContainer");
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1366;
+      state.zoom = isMobile ? 0.52 : isTablet ? 0.72 : 0.85;
+
+      const focusNode = THEORY_MAP[state.selectedId] || THEORY_MAP["dow"];
+      if (container && focusNode) {
+        state.panX = container.clientWidth * 0.44 - (focusNode.pos.x + 134) * state.zoom;
+        state.panY = container.clientHeight * 0.48 - (focusNode.pos.y + 68) * state.zoom;
+      } else {
+        state.panX = 24;
+        state.panY = 30;
+      }
+      updateStageTransform();
+      renderConnectionsSVG();
+    }
+
+    // View Mode Switching
+    function syncHintBannerVisibility() {
+      const banner = document.getElementById("originHintBanner");
+      if (!banner) return;
+      banner.style.display = state.viewMode === "timeline" ? "none" : "";
+    }
+
+    document.getElementById("btnTreeView").addEventListener("click", () => {
+      state.viewMode = "tree";
+      syncHintBannerVisibility();
+      document.getElementById("treeContainer").classList.remove("hidden");
+      document.getElementById("canvasControls").classList.remove("hidden");
+      document.getElementById("timelineContainer").classList.add("hidden");
+      document.getElementById("btnTreeView").className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+      document.getElementById("btnTimelineView").className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200";
+      requestAnimationFrame(renderConnectionsSVG);
+    });
+
+    document.getElementById("btnTimelineView").addEventListener("click", () => {
+      state.viewMode = "timeline";
+      syncHintBannerVisibility();
+      document.getElementById("treeContainer").classList.add("hidden");
+      document.getElementById("canvasControls").classList.add("hidden");
+      document.getElementById("timelineContainer").classList.remove("hidden");
+      document.getElementById("btnTimelineView").className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40";
+      document.getElementById("btnTreeView").className = "px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 text-slate-400 hover:text-slate-200";
+      renderTimelineView();
+    });
+
+    // Search Input
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    searchInput.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      clearSearchBtn.classList.toggle("hidden", !state.searchQuery);
+      renderTreeAndEdges();
+      renderTimelineView();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      state.searchQuery = "";
+      searchInput.value = "";
+      clearSearchBtn.classList.add("hidden");
+      renderTreeAndEdges();
+      renderTimelineView();
+    });
+
+    // Zoom & Reset Controls
+    document.getElementById("zoomInBtn").addEventListener("click", () => {
+      state.zoom = Math.min(1.5, +(state.zoom + 0.12).toFixed(2));
+      updateStageTransform();
+    });
+    document.getElementById("zoomOutBtn").addEventListener("click", () => {
+      state.zoom = Math.max(0.45, +(state.zoom - 0.12).toFixed(2));
+      updateStageTransform();
+    });
+    document.getElementById("resetViewBtn").addEventListener("click", resetCameraToCenter);
+
+    // Unified Pointer Pan + Delegated Card Selection (8px Micro-Movement Tolerance)
+    const treeContainer = document.getElementById("treeContainer");
+    const nodesLayer = document.getElementById("nodesLayer");
+    const timelineList = document.getElementById("timelineList");
+
+    treeContainer.addEventListener("pointerdown", (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      state.isDragging = true;
+      state.hasDraggedBeyondThreshold = false;
+      state.pointerDownX = e.clientX;
+      state.pointerDownY = e.clientY;
+      state.dragStartX = e.clientX - state.panX;
+      state.dragStartY = e.clientY - state.panY;
+    });
+
+    window.addEventListener("pointermove", (e) => {
+      if (!state.isDragging) return;
+      const dist = Math.hypot(e.clientX - state.pointerDownX, e.clientY - state.pointerDownY);
+      if (dist >= 8) {
+        state.hasDraggedBeyondThreshold = true;
+      }
+      if (state.hasDraggedBeyondThreshold) {
+        state.panX = e.clientX - state.dragStartX;
+        state.panY = e.clientY - state.dragStartY;
+        updateStageTransform();
+      }
+    });
+
+    window.addEventListener("pointerup", (e) => {
+      if (!state.isDragging) return;
+      const dist = Math.hypot(e.clientX - state.pointerDownX, e.clientY - state.pointerDownY);
+      const wasClick = dist < 8 && !state.hasDraggedBeyondThreshold;
+      state.isDragging = false;
+
+      if (wasClick && nodesLayer.contains(e.target)) {
+        triggerDelegatedSelection(e.target);
+      }
+      setTimeout(() => {
+        state.hasDraggedBeyondThreshold = false;
+      }, 0);
+    });
+
+    // Native Click & Pointerover Event Delegation on #nodesLayer
+    nodesLayer.addEventListener("click", (e) => {
+      if (state.hasDraggedBeyondThreshold) return;
+      triggerDelegatedSelection(e.target);
+    });
+
+    nodesLayer.addEventListener("pointerover", (e) => {
+      const card = e.target.closest("[data-theory-id]");
+      const nextHoverId = card ? card.getAttribute("data-theory-id") : null;
+      if (state.hoveredId !== nextHoverId) {
+        hoverNode(nextHoverId);
+      }
+    });
+
+    nodesLayer.addEventListener("pointerleave", () => {
+      if (state.hoveredId !== null) {
+        hoverNode(null);
+      }
+    });
+
+    // Delegated Selection on #timelineList
+    timelineList.addEventListener("click", (e) => {
+      triggerDelegatedSelection(e.target);
+    });
+
+    // Wheel Zoom Support
+    treeContainer.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      state.zoom = Math.min(1.5, Math.max(0.45, +(state.zoom + delta).toFixed(2)));
+      updateStageTransform();
+    }, { passive: false });
+
+    // ResizeObserver & Window Resize Synchronization
+    window.addEventListener("resize", () => {
+      syncResponsiveDrawerVisibility();
+      requestAnimationFrame(renderConnectionsSVG);
+    });
+
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(() => {
+        requestAnimationFrame(renderConnectionsSVG);
+      });
+      ro.observe(treeContainer);
+    }
+
+    // =========================================================================
+    // 8. INITIALIZATION ON DOM READY & FONT LOAD
+    // =========================================================================
+    function bootstrapApp() {
+      state.selectedId = "dow";
+      state.mobileDrawerOpen = false;
+      renderAll();
+      resetCameraToCenter();
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          requestAnimationFrame(renderConnectionsSVG);
+        });
+      }
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bootstrapApp);
+    } else {
+      bootstrapApp();
+    }
+  </script>
+</body>
+</html>

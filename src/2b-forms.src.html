@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IGO · 回踩PMH 2B形态三分法与 EV 推演终端</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"PingFang SC"', '"HarmonyOS Sans SC"', '"Microsoft YaHei"', '"Noto Sans SC"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"SFMono-Regular"', 'Consolas', '"Liberation Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ============ 排版基线：唯一字体栈 + 统一字重 / 数字等宽 ============ */
+    :root {
+      --font-ui: "Inter", "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+      --font-num: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --fs-xs: 10.5px;  /* 仅用于数字后缀 / 单位 */
+      --fs-sm: 12px;    /* 常规标签与正文 */
+      --fs-md: 13px;    /* 强调标题 */
+    }
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+    body {
+      font-family: var(--font-ui);
+      font-size: var(--fs-sm);
+      line-height: 1.5;
+      letter-spacing: .01em;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+    /* 数字统一等宽，避免价格跳动时左右抖动 */
+    .font-mono,
+    .num {
+      font-family: var(--font-num);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0;
+    }
+    /* 中文在合成粗体下会发糊，收掉额外字距 */
+    .font-semibold, .font-bold, strong, b { letter-spacing: 0; }
+    /* 表单控件继承页面字体，防止回退成系统默认 UI 字体 */
+    button, input, select, textarea { font-family: inherit; letter-spacing: inherit; }
+    /* 窄屏强制进入单图专注，切换器隐藏，把宽度让给形态选择 */
+    .mode-switch-wrap { display: inline-flex; }
+    @media (max-width: 639px) {
+      .mode-switch-wrap { display: none; }
+    }
+    /* 中文标签统一收紧行高，避免上下留白不均 */
+    .zh { letter-spacing: 0; }
+    /* OHLC 读数只在「单图专注」下显示，三图并排时保持 HUD 干净 */
+    .ohlc {
+      display: none;
+      font-family: var(--font-num);
+      font-size: 11px;
+      letter-spacing: 0;
+      color: #7A7F8E;
+      white-space: nowrap;
+    }
+    html.single-mode .ohlc { display: inline; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #0B0E14;
+      color: #D1D4DC;
+      overflow-x: hidden;
+      overflow-y: auto;
+      user-select: none;
+    }
+    /* 桌面端锁定一屏；窄屏底部 EV 面板会堆叠，允许纵向滚动 */
+    @media (min-width: 1280px) {
+      html, body { overflow: hidden; }
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 3px;
+      background: #2A2E39;
+      border-radius: 2px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #2962FF;
+      border: 1.5px solid #0B0E14;
+      margin-top: -4.5px;
+      transition: transform 0.12s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen xl:h-screen w-screen bg-[#0B0E14] text-[#D1D4DC] font-sans overflow-y-auto xl:overflow-hidden">
+
+  <!-- 1. 顶部极简导航栏（48px） -->
+  <header class="min-h-[52px] shrink-0 bg-[#0B0E14] border-b border-[#1E222D] px-3 sm:px-4 py-1.5 lg:py-0 flex flex-wrap lg:flex-nowrap items-center justify-between gap-2">
+    <!-- 左侧标题徽章 -->
+    <div class="flex items-center gap-2 shrink-0">
+      <span class="w-2 h-2 rounded-full bg-[#26C6DA]"></span>
+      <span class="px-2 py-0.5 rounded bg-[#131722] border border-[#2A2E39] text-[13px] font-semibold text-white whitespace-nowrap">
+        IGO · 2B形态学与EV推演终端
+      </span>
+      <span class="hidden xl:inline text-[12px] text-[#787B86] whitespace-nowrap">
+        1:1 同 Y 轴对比 ($99.35–$101.40 · PMH $100.00)
+      </span>
+    </div>
+
+    <!-- 中间视图模式切换（三图全景对比 vs 单图深度专注） -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <div class="mode-switch-wrap rounded bg-[#131722] p-0.5 border border-[#2A2E39]">
+        <button id="btnModeTri" onclick="setLayoutMode('tri')" class="px-2.5 py-1 rounded text-[12px] font-medium bg-[#2962FF] text-white transition whitespace-nowrap">
+          三图全景对比
+        </button>
+        <button id="btnModeSingle" onclick="setLayoutMode('single')" class="px-2.5 py-1 rounded text-[12px] font-medium text-[#787B86] hover:text-white transition whitespace-nowrap">
+          单图深度专注
+        </button>
+      </div>
+
+      <!-- 单图深度专注形态选择器 -->
+      <div id="singleSelectorGroup" style="display:none" class="inline-flex rounded bg-[#131722] p-0.5 border border-[#2A2E39]">
+        <button id="btnSel1" onclick="setActiveSingle('m1')" class="px-2 py-1 rounded text-[12px] font-medium bg-[#089981]/25 text-[#089981] transition whitespace-nowrap">
+          ① 压缩小2B
+        </button>
+        <button id="btnSel2" onclick="setActiveSingle('m2')" class="px-2 py-1 rounded text-[12px] font-medium text-[#787B86] hover:text-white transition whitespace-nowrap">
+          ② 扩张大2B
+        </button>
+        <button id="btnSel3" onclick="setActiveSingle('m3')" class="px-2 py-1 rounded text-[12px] font-medium text-[#787B86] hover:text-white transition whitespace-nowrap">
+          ③ 嵌套收缩2B
+        </button>
+      </div>
+    </div>
+
+    <!-- 右侧实时参数控制组：目标位滑块 + 1R 预算 -->
+    <div class="flex items-center gap-3 shrink-0">
+      <div class="flex items-center gap-1.5">
+        <label for="rngTarget" class="text-[12px] text-[#787B86] whitespace-nowrap">目标位</label>
+        <input id="rngTarget" type="range" min="100.60" max="101.40" step="0.02" value="101.20" oninput="onParamsChange()" class="w-20 sm:w-24" />
+        <span id="lblTargetPrice" class="font-mono text-xs font-semibold text-[#089981] w-14 text-right">$101.20</span>
+      </div>
+
+      <div class="h-4 w-[1px] bg-[#1E222D]"></div>
+
+      <div class="flex items-center gap-1.5">
+        <label for="inpRisk" class="text-[12px] text-[#787B86] whitespace-nowrap">1R ($)</label>
+        <input id="inpRisk" type="number" value="100" min="10" step="10" oninput="onParamsChange()"
+          class="w-14 h-7 px-1.5 rounded bg-[#131722] border border-[#2A2E39] focus:border-[#2962FF] focus:outline-none font-mono text-xs font-semibold text-white text-right" />
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. 主图表视觉区（3列同步网格 或 1列全屏深度视图） -->
+  <main id="chartsMain" class="flex-1 min-h-[340px] xl:min-h-0 flex flex-col lg:flex-row bg-[#0F131A] overflow-hidden relative">
+    
+    <!-- 形态 1：压缩小2B · 优 -->
+    <section id="paneM1" class="flex-1 min-w-0 relative h-1/3 lg:h-full bg-[#0F131A] overflow-hidden">
+      <div class="absolute top-2 left-2.5 z-10 pointer-events-none flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-mono">
+        <span class="px-1.5 py-0.5 rounded bg-[#089981]/15 text-[#089981] border border-[#089981]/30 font-sans font-semibold">
+          ① 压缩小2B · 优 (高盈亏比)
+        </span>
+        <span id="hudM1Phase" class="text-[#26C6DA] font-sans font-medium">[④ 突破颈线入场]</span>
+        <span class="ohlc">O:<span id="hudM1O" class="text-[#D1D4DC]">100.05</span> H:<span id="hudM1H" class="text-[#D1D4DC]">100.14</span> L:<span id="hudM1L" class="text-[#D1D4DC]">100.04</span> C:<span id="hudM1C" class="text-[#089981]">100.12</span></span>
+      </div>
+      <canvas id="canvasM1" class="w-full h-full block cursor-crosshair"></canvas>
+    </section>
+
+    <div id="div12" class="h-[1px] w-full lg:h-full lg:w-[1px] bg-[#1E222D] shrink-0"></div>
+
+    <!-- 形态 2：扩张大2B · 劣 -->
+    <section id="paneM2" class="flex-1 min-w-0 relative h-1/3 lg:h-full bg-[#0F131A] overflow-hidden">
+      <div class="absolute top-2 left-2.5 z-10 pointer-events-none flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-mono">
+        <span class="px-1.5 py-0.5 rounded bg-[#F23645]/15 text-[#F23645] border border-[#F23645]/30 font-sans font-semibold">
+          ② 扩张大2B · 劣 (低盈亏比)
+        </span>
+        <span id="hudM2Phase" class="text-[#F59E0B] font-sans font-medium">[④ 突破高颈线入场]</span>
+        <span class="ohlc">O:<span id="hudM2O" class="text-[#D1D4DC]">100.28</span> H:<span id="hudM2H" class="text-[#D1D4DC]">100.40</span> L:<span id="hudM2L" class="text-[#D1D4DC]">100.26</span> C:<span id="hudM2C" class="text-[#089981]">100.38</span></span>
+      </div>
+      <canvas id="canvasM2" class="w-full h-full block cursor-crosshair"></canvas>
+    </section>
+
+    <div id="div23" class="h-[1px] w-full lg:h-full lg:w-[1px] bg-[#1E222D] shrink-0"></div>
+
+    <!-- 形态 3：嵌套收缩2B · 慎 -->
+    <section id="paneM3" class="flex-1 min-w-0 relative h-1/3 lg:h-full bg-[#0F131A] overflow-hidden">
+      <div class="absolute top-2 left-2.5 z-10 pointer-events-none flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] font-mono">
+        <span class="px-1.5 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 font-sans font-semibold">
+          ③ 嵌套收缩2B · 慎 (止损脆弱)
+        </span>
+        <span id="hudM3Phase" class="text-[#F59E0B] font-sans font-medium">[突破子颈线 $100.12]</span>
+        <span class="ohlc">O:<span id="hudM3O" class="text-[#D1D4DC]">100.10</span> H:<span id="hudM3H" class="text-[#D1D4DC]">100.19</span> L:<span id="hudM3L" class="text-[#D1D4DC]">100.09</span> C:<span id="hudM3C" class="text-[#089981]">100.17</span></span>
+      </div>
+      <canvas id="canvasM3" class="w-full h-full block cursor-crosshair"></canvas>
+    </section>
+
+  </main>
+
+  <!-- 3. 第三层：期望值 EV、盈亏平衡胜率与累计净值推演 -->
+  <footer class="shrink-0 xl:h-[178px] bg-[#0B0E14] border-t border-[#1E222D] px-3 py-2 flex flex-col xl:flex-row items-stretch gap-2.5">
+
+    <!-- 3.1 左侧：胜率与样本参数 -->
+    <div class="w-full xl:w-[246px] shrink-0 bg-[#0F131A] border border-[#1E222D] rounded-md px-3 py-2 flex flex-col justify-between gap-2">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[12px] font-semibold text-white flex items-center gap-1.5 whitespace-nowrap">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#2962FF]"></span>
+          第三层 · EV 与胜率
+        </span>
+        <span class="font-mono text-[10.5px] text-[#787B86] whitespace-nowrap">EV = p·R − (1−p)</span>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between text-[12px] mb-1">
+          <label for="rngWinRate" class="text-[#878C9B]">5秒图综合胜率</label>
+          <span id="lblWinRate" class="font-mono font-bold text-[13px] text-[#26C6DA]">38%</span>
+        </div>
+        <input id="rngWinRate" type="range" min="20" max="65" step="1" value="38" oninput="onParamsChange()" class="w-full" />
+        <div class="flex justify-between font-mono text-[10.5px] text-[#5D606B] mt-0.5">
+          <span>20%</span>
+          <span>38% 常态</span>
+          <span>65%</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-1.5 border-t border-[#1E222D]">
+        <span class="text-[12px] text-[#878C9B]">样本笔数</span>
+        <div class="inline-flex rounded bg-[#131722] p-0.5 border border-[#2A2E39]">
+          <button id="btnTrades20" onclick="setTradeCount(20)" class="px-2 py-0.5 rounded font-mono text-[10.5px] text-[#787B86] hover:text-white transition">20笔</button>
+          <button id="btnTrades30" onclick="setTradeCount(30)" class="px-2 py-0.5 rounded font-mono text-[10.5px] bg-[#2962FF] text-white font-semibold transition">30笔</button>
+          <button id="btnTrades50" onclick="setTradeCount(50)" class="px-2 py-0.5 rounded font-mono text-[10.5px] text-[#787B86] hover:text-white transition">50笔</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.2 中间：三类结构期望值对比 -->
+    <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 min-w-0">
+
+      <!-- 卡片 1：压缩小2B -->
+      <div class="min-w-0 bg-[#0F131A] border border-[#089981]/35 rounded-md px-2.5 py-2 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-1">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-[#089981] shrink-0"></span>
+            <span class="text-[12px] font-semibold text-white truncate">① 压缩小2B</span>
+          </div>
+          <span id="evCard1R" class="font-mono text-[10.5px] font-bold text-[#089981] shrink-0">6.3R · 555股</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 my-1 bg-[#131722]/80 rounded px-2 py-1.5 border border-[#1E222D]">
+          <div>
+            <div class="text-[10.5px] text-[#787B86] whitespace-nowrap">单笔期望 EV</div>
+            <div id="evCard1Unit" class="font-mono text-[13px] font-bold text-[#089981] leading-tight">+1.79R</div>
+          </div>
+          <div class="text-right">
+            <div id="evCard1CumLabel" class="text-[10.5px] text-[#787B86]">30笔累计</div>
+            <div id="evCard1Cum" class="font-mono text-[13px] font-bold text-[#089981] leading-tight">+53.6R</div>
+            <div id="evCard1CumUsd" class="font-mono text-[10.5px] text-[#089981]/80">+$5,363</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[10.5px]">
+          <span class="text-[#787B86] whitespace-nowrap">保本胜率</span>
+          <span id="evCard1Be" class="font-mono font-semibold text-[#D1D4DC]">13.6%</span>
+        </div>
+      </div>
+
+      <!-- 卡片 2：扩张大2B -->
+      <div class="min-w-0 bg-[#0F131A] border border-[#F23645]/35 rounded-md px-2.5 py-2 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-1">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-[#F23645] shrink-0"></span>
+            <span class="text-[12px] font-semibold text-white truncate">② 扩张大2B</span>
+          </div>
+          <span id="evCard2R" class="font-mono text-[10.5px] font-bold text-[#F23645] shrink-0">1.0R · 119股</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 my-1 bg-[#131722]/80 rounded px-2 py-1.5 border border-[#1E222D]">
+          <div>
+            <div class="text-[10.5px] text-[#787B86] whitespace-nowrap">单笔期望 EV</div>
+            <div id="evCard2Unit" class="font-mono text-[13px] font-bold text-[#F23645] leading-tight">-0.22R</div>
+          </div>
+          <div class="text-right">
+            <div id="evCard2CumLabel" class="text-[10.5px] text-[#787B86]">30笔累计</div>
+            <div id="evCard2Cum" class="font-mono text-[13px] font-bold text-[#F23645] leading-tight">-6.7R</div>
+            <div id="evCard2CumUsd" class="font-mono text-[10.5px] text-[#F23645]/80">-$666</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[10.5px]">
+          <span class="text-[#787B86] whitespace-nowrap">保本胜率</span>
+          <span id="evCard2Be" class="font-mono font-semibold text-[#D1D4DC]">48.8%</span>
+        </div>
+      </div>
+
+      <!-- 卡片 3：嵌套收缩2B -->
+      <div class="min-w-0 bg-[#0F131A] border border-[#F59E0B]/35 rounded-md px-2.5 py-2 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-1">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-[#F59E0B] shrink-0"></span>
+            <span class="text-[12px] font-semibold text-white truncate">③ 嵌套收缩2B</span>
+          </div>
+          <span id="evCard3R" class="font-mono text-[10.5px] font-bold text-[#F59E0B] shrink-0">宏1.7R · 156股</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 my-1 bg-[#131722]/80 rounded px-2 py-1.5 border border-[#1E222D]">
+          <div>
+            <div class="text-[10.5px] text-[#787B86] whitespace-nowrap">单笔期望 EV</div>
+            <div id="evCard3Unit" class="font-mono text-[13px] font-bold text-[#F59E0B] leading-tight">+0.02R</div>
+          </div>
+          <div class="text-right">
+            <div id="evCard3CumLabel" class="text-[10.5px] text-[#787B86]">30笔累计</div>
+            <div id="evCard3Cum" class="font-mono text-[13px] font-bold text-[#F59E0B] leading-tight">+0.6R</div>
+            <div id="evCard3CumUsd" class="font-mono text-[10.5px] text-[#F59E0B]/80">+$64</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[10.5px]">
+          <span class="text-[#787B86] whitespace-nowrap">保本胜率</span>
+          <span id="evCard3Be" class="font-mono font-semibold text-[#D1D4DC]">37.2%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3.3 右侧：累计净值期望轨迹 -->
+    <div class="w-full xl:w-[352px] h-[152px] xl:h-full shrink-0 bg-[#0F131A] border border-[#1E222D] rounded-md relative overflow-hidden">
+      <div class="absolute top-1.5 left-2.5 right-2.5 z-10 pointer-events-none flex items-center justify-between gap-2 text-[10.5px]">
+        <span class="font-semibold text-white whitespace-nowrap">累计净值期望 (R)</span>
+        <div class="flex items-center gap-2 font-mono whitespace-nowrap">
+          <span class="text-[#089981]">●压缩</span>
+          <span class="text-[#F59E0B]">●嵌套</span>
+          <span class="text-[#F23645]">●扩张</span>
+        </div>
+      </div>
+      <canvas id="canvasEvCurve" class="w-full h-full block cursor-crosshair"></canvas>
+    </div>
+
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 0. Canvas 排版常量（与页面 DOM 共用同一套字体栈，字号只用 3 档）
+    // =========================================================================
+    const FONT_UI  = '"Inter","PingFang SC","HarmonyOS Sans SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif';
+    const FONT_NUM = '"JetBrains Mono","SFMono-Regular",Consolas,monospace';
+    const FS_AXIS  = 11;  // 坐标轴刻度
+    const FS_LABEL = 11;  // 结构标注 / 说明文字
+    const FS_BADGE = 11;  // 数据徽章
+
+    // =========================================================================
+    // 1. 共享 1:1 同步 Y 轴刻度 ($99.35 ~ $101.40+) 与 PMH ($100.00) 精确定义
+    // =========================================================================
+    const PMH_PRICE = 100.00;
+    const BASE_Y_MIN = 99.35;
+    const BASE_Y_MAX = 101.40;
+
+    // -------------------------------------------------------------------------
+    // 形态 1：【① 压缩小2B · 优 (高盈亏比)】
+    // ① 浅击穿 PMH 至 L1=$99.90 -> ② 站上 PMH 形成低颈线 $100.06 -> ③ 回测不破 HL=$100.01 -> ④ 突破颈线 $100.06 入场，STOP $99.88
+    // -------------------------------------------------------------------------
+    const MODEL_1 = {
+      id: 'm1',
+      entryIdx: 25,
+      entryPrice: 100.06,
+      stopPrice: 99.88,
+      l1: { idx: 13, price: 99.90, label: '① 浅击穿 L1 $99.90' },
+      neck: { idx: 18, price: 100.06, label: '② 低颈线 $100.06' },
+      hl: { idx: 22, price: 100.01, label: '③ 回测不破 HL $100.01' },
+      envelope: {
+        startIdx: 11,
+        endIdx: 25,
+        top: 100.06,
+        bottom: 99.90,
+        stroke: '#26C6DA',
+        fill: 'rgba(38, 198, 218, 0.08)',
+        tag: '压缩包络 · 高 $0.16'
+      },
+      // 38 根 5S K线: [open, high, low, close, vol, phase]
+      candles: [
+        [99.66, 99.76, 99.64, 99.74, 22, '[突破PMH前奏]'],
+        [99.74, 99.86, 99.72, 99.84, 26, '[突破PMH前奏]'],
+        [99.84, 99.98, 99.82, 99.96, 32, '[突破PMH前奏]'],
+        [99.96, 100.10, 99.94, 100.08, 46, '[放量突破PMH]'],
+        [100.08, 100.22, 100.06, 100.20, 40, '[冲高回踩前]'],
+        [100.20, 100.32, 100.18, 100.30, 35, '[高点 $100.32]'],
+        [100.30, 100.31, 100.21, 100.23, 24, '[开始回踩PMH]'],
+        [100.23, 100.25, 100.14, 100.16, 21, '[开始回踩PMH]'],
+        [100.16, 100.18, 100.07, 100.09, 19, '[接近PMH]'],
+        [100.09, 100.10, 100.01, 100.03, 17, '[触及PMH]'],
+        // 10..14: ① 浅击穿 PMH 至 L1=$99.90 并快速收回
+        [100.03, 100.04, 99.96, 99.97, 18, '[① 浅击穿PMH]'],
+        [99.97, 99.98, 99.93, 99.94, 17, '[① 浅击穿PMH]'],
+        [99.94, 99.95, 99.91, 99.92, 19, '[① 浅击穿PMH]'],
+        [99.92, 99.97, 99.90, 99.96, 28, '[① 浅击穿 L1 $99.90]'],
+        [99.96, 100.02, 99.95, 100.01, 25, '[② 重新站上PMH]'],
+        // 15..19: ② 站上 PMH 后形成紧贴上方的低颈线 $100.06
+        [100.01, 100.04, 100.00, 100.03, 20, '[② 站稳PMH上方]'],
+        [100.03, 100.05, 100.02, 100.04, 17, '[② 形成低颈线]'],
+        [100.04, 100.06, 100.03, 100.05, 16, '[② 形成低颈线]'],
+        [100.05, 100.06, 100.02, 100.03, 15, '[② 低颈线 $100.06]'],
+        [100.03, 100.04, 100.01, 100.02, 13, '[③ 回测PMH支撑]'],
+        // 20..24: ③ 二次测试 PMH 支撑，最低点 HL=$100.01（不击穿）
+        [100.02, 100.03, 100.01, 100.02, 12, '[③ 测试PMH不破]'],
+        [100.02, 100.03, 100.01, 100.02, 11, '[③ 测试PMH不破]'],
+        [100.02, 100.04, 100.01, 100.03, 15, '[③ 回测不破 HL $100.01]'],
+        [100.03, 100.05, 100.02, 100.04, 18, '[贴颈线蓄力]'],
+        [100.04, 100.06, 100.03, 100.05, 22, '[贴颈线蓄力]'],
+        // 25: ④ 放量突破低颈线 $100.06 入场
+        [100.05, 100.14, 100.04, 100.12, 52, '[④ 突破颈线入场]'],
+        // 26..37: 单边释放至目标位
+        [100.12, 100.24, 100.11, 100.22, 46, '[高盈亏比释放]'],
+        [100.22, 100.34, 100.20, 100.32, 44, '[高盈亏比释放]'],
+        [100.32, 100.44, 100.30, 100.42, 42, '[高盈亏比释放]'],
+        [100.42, 100.46, 100.38, 100.41, 24, '[高盈亏比释放]'],
+        [100.41, 100.55, 100.40, 100.53, 43, '[高盈亏比释放]'],
+        [100.53, 100.68, 100.51, 100.66, 45, '[高盈亏比释放]'],
+        [100.66, 100.81, 100.64, 100.79, 44, '[高盈亏比释放]'],
+        [100.79, 100.94, 100.77, 100.92, 47, '[高盈亏比释放]'],
+        [100.92, 101.06, 100.90, 101.04, 46, '[高盈亏比释放]'],
+        [101.04, 101.18, 101.02, 101.16, 49, '[抵达目标位]'],
+        [101.16, 101.25, 101.14, 101.22, 41, '[抵达目标位]'],
+        [101.22, 101.28, 101.18, 101.24, 36, '[抵达目标位]']
+      ]
+    };
+
+    // -------------------------------------------------------------------------
+    // 形态 2：【② 扩张大2B · 劣 (低盈亏比)】
+    // ① 深击穿 PMH 至 L1=$99.50 -> ② 剧烈反弹站上 PMH 形成高颈线 $100.32 -> ③ 回测 PMH 不破 HL=$100.04 -> ④ 突破高颈线 $100.32 入场，STOP $99.48
+    // -------------------------------------------------------------------------
+    const MODEL_2 = {
+      id: 'm2',
+      entryIdx: 25,
+      entryPrice: 100.32,
+      stopPrice: 99.48,
+      l1: { idx: 13, price: 99.50, label: '① 深击穿 L1 $99.50' },
+      neck: { idx: 19, price: 100.32, label: '② 高颈线 $100.32' },
+      hl: { idx: 22, price: 100.04, label: '③ 回测不破 HL $100.04' },
+      envelope: {
+        startIdx: 10,
+        endIdx: 25,
+        top: 100.32,
+        bottom: 99.50,
+        stroke: '#F23645',
+        fill: 'rgba(242, 54, 69, 0.08)',
+        tag: '扩张包络 · 高 $0.82'
+      },
+      candles: [
+        [99.66, 99.76, 99.64, 99.74, 22, '[突破PMH前奏]'],
+        [99.74, 99.86, 99.72, 99.84, 26, '[突破PMH前奏]'],
+        [99.84, 99.98, 99.82, 99.96, 32, '[突破PMH前奏]'],
+        [99.96, 100.10, 99.94, 100.08, 46, '[放量突破PMH]'],
+        [100.08, 100.22, 100.06, 100.20, 40, '[冲高回踩前]'],
+        [100.20, 100.32, 100.18, 100.30, 35, '[高点 $100.32]'],
+        [100.30, 100.31, 100.21, 100.23, 24, '[开始回踩PMH]'],
+        [100.23, 100.25, 100.14, 100.16, 21, '[开始回踩PMH]'],
+        [100.16, 100.18, 100.07, 100.09, 19, '[接近PMH]'],
+        // 9..13: ① 深击穿 PMH $100.00，一路砸穿至 L1=$99.50
+        [100.09, 100.10, 99.90, 99.92, 36, '[① 击穿PMH]'],
+        [99.92, 99.94, 99.74, 99.76, 44, '[① 深度下砸]'],
+        [99.76, 99.78, 99.60, 99.62, 49, '[① 深度下砸]'],
+        [99.62, 99.64, 99.53, 99.55, 53, '[① 深度下砸]'],
+        [99.55, 99.66, 99.50, 99.64, 58, '[① 深击穿 L1 $99.50]'],
+        // 14..19: ② 剧烈V反重新站上 PMH，惯性冲出高悬颈线 $100.32
+        [99.64, 99.86, 99.62, 99.84, 50, '[剧烈反弹]'],
+        [99.84, 100.04, 99.82, 100.02, 48, '[② 重新站上PMH]'],
+        [100.02, 100.18, 100.00, 100.16, 46, '[惯性冲高]'],
+        [100.16, 100.28, 100.14, 100.26, 43, '[惯性冲高]'],
+        [100.26, 100.31, 100.22, 100.29, 41, '[形成高颈线]'],
+        [100.29, 100.32, 100.20, 100.22, 39, '[② 高颈线 $100.32]'],
+        // 20..24: ③ 回测 PMH 支撑不破 (HL=$100.04)
+        [100.22, 100.23, 100.09, 100.11, 29, '[回测PMH]'],
+        [100.11, 100.13, 100.05, 100.07, 25, '[③ 测试PMH不破]'],
+        [100.07, 100.14, 100.04, 100.12, 28, '[③ 回测不破 HL $100.04]'],
+        [100.12, 100.24, 100.10, 100.22, 32, '[拉向高颈线]'],
+        [100.22, 100.31, 100.20, 100.28, 34, '[接近高颈线]'],
+        // 25: ④ 突破高颈线 $100.32 入场
+        [100.28, 100.40, 100.26, 100.38, 49, '[④ 突破高颈线入场]'],
+        // 26..37: 上涨空间严重受限
+        [100.38, 100.48, 100.36, 100.46, 42, '[空间被高颈线吞噬]'],
+        [100.46, 100.56, 100.44, 100.54, 40, '[空间被高颈线吞噬]'],
+        [100.54, 100.64, 100.52, 100.62, 38, '[空间被高颈线吞噬]'],
+        [100.62, 100.65, 100.57, 100.60, 22, '[空间被高颈线吞噬]'],
+        [100.60, 100.72, 100.58, 100.70, 39, '[空间被高颈线吞噬]'],
+        [100.70, 100.82, 100.68, 100.80, 41, '[空间被高颈线吞噬]'],
+        [100.80, 100.92, 100.78, 100.90, 40, '[空间被高颈线吞噬]'],
+        [100.90, 101.02, 100.88, 101.00, 42, '[空间被高颈线吞噬]'],
+        [101.00, 101.11, 100.98, 101.09, 40, '[空间被高颈线吞噬]'],
+        [101.09, 101.20, 101.07, 101.18, 44, '[抵达目标位]'],
+        [101.18, 101.25, 101.15, 101.22, 38, '[抵达目标位]'],
+        [101.22, 101.28, 101.18, 101.24, 34, '[抵达目标位]']
+      ]
+    };
+
+    // -------------------------------------------------------------------------
+    // 形态 3：【③ 嵌套收缩2B · 慎 (止损脆弱)】
+    // 外部大高波 2B (深击穿 Macro L1=$99.50 -> 反弹 Macro High=$100.32 未突破)
+    // 内部收敛出子级低波 2B: Sub-L1=$99.98 -> Sub-Neckline=$100.12 -> Sub-HL=$100.02 -> 突破 Sub-Neckline $100.12
+    // 脆弱止损 $99.96 (距入场 $0.16，易遭下方 Macro L1 流动性磁铁二次扫损) vs 真正宏观结构止损 $99.48 (距入场 $0.64)
+    // -------------------------------------------------------------------------
+    const MODEL_3 = {
+      id: 'm3',
+      entryIdx: 27,
+      entryPrice: 100.12,
+      fragileStopPrice: 99.96, // 内部子2B下方脆弱止损 ($0.16)
+      macroStopPrice: 99.48,   // 外部大结构真正止损 ($0.64)
+      macroL1: { idx: 11, price: 99.50, label: '外部 Macro L1 $99.50 (流动性磁铁)' },
+      macroHigh: { idx: 16, price: 100.32, label: '外部 Macro High $100.32 (未突破)' },
+      subL1: { idx: 19, price: 99.98, label: '子 L1 $99.98' },
+      subNeck: { idx: 22, price: 100.12, label: '子颈线 $100.12' },
+      subHl: { idx: 24, price: 100.02, label: '子 HL $100.02' },
+      outerBox: {
+        startIdx: 8,
+        endIdx: 27,
+        top: 100.32,
+        bottom: 99.50
+      },
+      innerBox: {
+        startIdx: 18,
+        endIdx: 27,
+        top: 100.12,
+        bottom: 99.98
+      },
+      candles: [
+        [99.66, 99.76, 99.64, 99.74, 22, '[突破PMH前奏]'],
+        [99.74, 99.86, 99.72, 99.84, 26, '[突破PMH前奏]'],
+        [99.84, 99.98, 99.82, 99.96, 32, '[突破PMH前奏]'],
+        [99.96, 100.10, 99.94, 100.08, 46, '[放量突破PMH]'],
+        [100.08, 100.22, 100.06, 100.20, 40, '[冲高回踩前]'],
+        [100.20, 100.30, 100.18, 100.28, 35, '[高点 $100.30]'],
+        [100.28, 100.29, 100.16, 100.18, 25, '[开始回踩]'],
+        // 7..11: 外部高波动深击穿至 Macro L1=$99.50
+        [100.18, 100.19, 99.96, 99.98, 36, '[击穿PMH]'],
+        [99.98, 100.00, 99.76, 99.78, 45, '[深度下砸]'],
+        [99.78, 99.80, 99.60, 99.62, 50, '[深度下砸]'],
+        [99.62, 99.64, 99.52, 99.54, 54, '[深度下砸]'],
+        [99.54, 99.66, 99.50, 99.64, 58, '[外部 Macro L1 $99.50]'],
+        // 12..16: 反弹至 Macro High $100.32，但未能突破
+        [99.64, 99.88, 99.62, 99.86, 49, '[剧烈反弹]'],
+        [99.86, 100.08, 99.84, 100.06, 47, '[重新站上PMH]'],
+        [100.06, 100.22, 100.04, 100.20, 44, '[冲向高点]'],
+        [100.20, 100.30, 100.18, 100.28, 41, '[接近前高]'],
+        [100.28, 100.32, 100.20, 100.22, 38, '[外部 Macro High $100.32 未破]'],
+        // 17..26: 在 PMH 上方内部波动率收缩，走成嵌套子2B ($99.98 ~ $100.12)
+        [100.22, 100.23, 100.07, 100.09, 26, '[内部波幅收窄]'],
+        [100.09, 100.10, 100.01, 100.03, 21, '[内部波幅收窄]'],
+        [100.03, 100.05, 99.98, 100.04, 23, '[子 L1 $99.98]'],
+        [100.04, 100.08, 100.03, 100.07, 18, '[内部收敛]'],
+        [100.07, 100.11, 100.06, 100.10, 17, '[内部收敛]'],
+        [100.10, 100.12, 100.07, 100.08, 16, '[子颈线 $100.12]'],
+        [100.08, 100.09, 100.03, 100.04, 14, '[内部回测]'],
+        [100.04, 100.06, 100.02, 100.05, 15, '[子 HL $100.02]'],
+        [100.05, 100.09, 100.04, 100.08, 18, '[贴子颈线]'],
+        [100.08, 100.11, 100.07, 100.10, 21, '[贴子颈线]'],
+        // 27: 突破子颈线 $100.12
+        [100.10, 100.19, 100.09, 100.17, 45, '[突破子颈线 $100.12]'],
+        // 28..37: 后续推进
+        [100.17, 100.28, 100.15, 100.26, 40, '[嵌套突破推进]'],
+        [100.26, 100.38, 100.24, 100.36, 42, '[冲破外部高点]'],
+        [100.36, 100.49, 100.34, 100.47, 41, '[单边延伸]'],
+        [100.47, 100.52, 100.43, 100.46, 23, '[单边延伸]'],
+        [100.46, 100.61, 100.45, 100.59, 41, '[单边延伸]'],
+        [100.59, 100.75, 100.57, 100.73, 43, '[单边延伸]'],
+        [100.73, 100.90, 100.71, 100.88, 42, '[单边延伸]'],
+        [100.88, 101.05, 100.86, 101.03, 44, '[单边延伸]'],
+        [101.03, 101.18, 101.01, 101.16, 46, '[抵达目标位]'],
+        [101.16, 101.26, 101.14, 101.23, 39, '[抵达目标位]']
+      ]
+    };
+
+    // =========================================================================
+    // 2. 全局状态与布局切换控制
+    // =========================================================================
+    let layoutMode = 'tri';     // 'tri' | 'single'
+    let activeSingle = 'm1';    // 'm1' | 'm2' | 'm3'
+    let riskBudget = 100;       // 默认 $100
+    let targetPrice = 101.20;   // 默认 $101.20
+    let winRatePct = 38;        // 默认 38% 胜率
+    let tradeCount = 30;        // 默认 30 笔样本
+    let hoverState = { m1: null, m2: null, m3: null };
+    let evHoverIdx = null;      // 累计净值轨迹的悬停笔数索引
+
+    const panes = {
+      m1: document.getElementById('paneM1'),
+      m2: document.getElementById('paneM2'),
+      m3: document.getElementById('paneM3')
+    };
+    const canvases = {
+      m1: document.getElementById('canvasM1'),
+      m2: document.getElementById('canvasM2'),
+      m3: document.getElementById('canvasM3')
+    };
+    const div12 = document.getElementById('div12');
+    const div23 = document.getElementById('div23');
+    const canvasEv = document.getElementById('canvasEvCurve');
+
+    function setLayoutMode(mode) {
+      layoutMode = mode;
+      // 只有单图专注时才展示 OHLC 读数，三图并排保持 HUD 简洁
+      document.documentElement.classList.toggle('single-mode', mode === 'single');
+      const btnTri = document.getElementById('btnModeTri');
+      const btnSingle = document.getElementById('btnModeSingle');
+      const selGroup = document.getElementById('singleSelectorGroup');
+
+      const activeBtn = 'px-2.5 py-1 rounded text-[12px] font-medium bg-[#2962FF] text-white transition whitespace-nowrap';
+      const inactiveBtn = 'px-2.5 py-1 rounded text-[12px] font-medium text-[#787B86] hover:text-white transition whitespace-nowrap';
+
+      btnTri.className = mode === 'tri' ? activeBtn : inactiveBtn;
+      btnSingle.className = mode === 'single' ? activeBtn : inactiveBtn;
+
+      if (mode === 'tri') {
+        selGroup.style.display = 'none';
+        ['m1', 'm2', 'm3'].forEach(k => {
+          panes[k].classList.remove('hidden', 'h-full');
+          panes[k].classList.add('h-1/3', 'lg:h-full');
+        });
+        div12.classList.remove('hidden');
+        div23.classList.remove('hidden');
+      } else {
+        selGroup.style.display = 'inline-flex';
+        setActiveSingle(activeSingle);
+      }
+      renderAll();
+    }
+
+    function setActiveSingle(key) {
+      activeSingle = key;
+      const styles = {
+        m1: 'px-2 py-1 rounded text-[12px] font-medium bg-[#089981]/25 text-[#089981] transition whitespace-nowrap',
+        m2: 'px-2 py-1 rounded text-[12px] font-medium bg-[#F23645]/25 text-[#F23645] transition whitespace-nowrap',
+        m3: 'px-2 py-1 rounded text-[12px] font-medium bg-[#F59E0B]/25 text-[#F59E0B] transition whitespace-nowrap'
+      };
+      const offStyle = 'px-2 py-1 rounded text-[12px] font-medium text-[#787B86] hover:text-white transition whitespace-nowrap';
+
+      document.getElementById('btnSel1').className = key === 'm1' ? styles.m1 : offStyle;
+      document.getElementById('btnSel2').className = key === 'm2' ? styles.m2 : offStyle;
+      document.getElementById('btnSel3').className = key === 'm3' ? styles.m3 : offStyle;
+
+      ['m1', 'm2', 'm3'].forEach(k => {
+        if (k === key) {
+          panes[k].classList.remove('hidden', 'h-1/3');
+          panes[k].classList.add('h-full');
+        } else {
+          panes[k].classList.add('hidden');
+        }
+      });
+      div12.classList.add('hidden');
+      div23.classList.add('hidden');
+      renderAll();
+    }
+
+    function onParamsChange() {
+      riskBudget = Math.max(10, parseFloat(document.getElementById('inpRisk').value) || 100);
+      targetPrice = parseFloat(document.getElementById('rngTarget').value) || 101.20;
+      winRatePct = parseInt(document.getElementById('rngWinRate').value, 10) || 38;
+      document.getElementById('lblTargetPrice').textContent = `$${targetPrice.toFixed(2)}`;
+      document.getElementById('lblWinRate').textContent = `${winRatePct}%`;
+      updateEvStats();
+      renderAll();
+    }
+
+    function setTradeCount(n) {
+      tradeCount = n;
+      const onCls = 'px-2 py-0.5 rounded font-mono text-[10.5px] bg-[#2962FF] text-white font-semibold transition';
+      const offCls = 'px-2 py-0.5 rounded font-mono text-[10.5px] text-[#787B86] hover:text-white transition';
+      document.getElementById('btnTrades20').className = n === 20 ? onCls : offCls;
+      document.getElementById('btnTrades30').className = n === 30 ? onCls : offCls;
+      document.getElementById('btnTrades50').className = n === 50 ? onCls : offCls;
+      updateEvStats();
+      drawEvCurve();
+    }
+
+    // =========================================================================
+    // 2.5 第三层：期望值 EV、保本胜率、累计净值
+    // =========================================================================
+    function getMetrics() {
+      const p = winRatePct / 100;
+      const q = 1 - p;
+
+      // ① 压缩小2B
+      const s1 = MODEL_1.entryPrice - MODEL_1.stopPrice;              // $0.18
+      const g1 = Math.max(0.01, targetPrice - MODEL_1.entryPrice);
+      const r1 = g1 / s1;
+      const ev1 = p * r1 - q;
+
+      // ② 扩张大2B
+      const s2 = MODEL_2.entryPrice - MODEL_2.stopPrice;              // $0.84
+      const g2 = Math.max(0.01, targetPrice - MODEL_2.entryPrice);
+      const r2 = g2 / s2;
+      const ev2 = p * r2 - q;
+
+      // ③ 嵌套收缩2B（按真正宏观结构止损 $0.64 计，脆弱止损不算数）
+      const s3 = MODEL_3.entryPrice - MODEL_3.macroStopPrice;          // $0.64
+      const g3 = Math.max(0.01, targetPrice - MODEL_3.entryPrice);
+      const r3 = g3 / s3;
+      const ev3 = p * r3 - q;
+
+      const pack = (r, s, ev) => ({
+        r, ev,
+        shares: Math.floor(riskBudget / s),
+        cumR: ev * tradeCount,
+        cumUsd: ev * tradeCount * riskBudget,
+        be: (1 / (1 + r)) * 100
+      });
+      return { m1: pack(r1, s1, ev1), m2: pack(r2, s2, ev2), m3: pack(r3, s3, ev3) };
+    }
+
+    function formatSignedR(v) {
+      return `${v >= 0 ? '+' : ''}${v.toFixed(2)}R`;
+    }
+
+    function formatSignedUsd(v) {
+      const abs = Math.round(Math.abs(v)).toLocaleString('en-US');
+      return v >= 0 ? `+$${abs}` : `-$${abs}`;
+    }
+
+    // 按 EV 正负取色：盈利绿 / 临界琥珀 / 亏损红
+    function evColor(v, warnGuard) {
+      if (v >= 0) return '#089981';
+      return (warnGuard && v > warnGuard) ? '#F59E0B' : '#F23645';
+    }
+
+    function updateEvStats() {
+      const m = getMetrics();
+
+      [
+        { k: 'm1', tag: '1', rText: `${m.m1.r.toFixed(1)}R · ${m.m1.shares}股`, warn: 0 },
+        { k: 'm2', tag: '2', rText: `${m.m2.r.toFixed(1)}R · ${m.m2.shares}股`, warn: 0 },
+        { k: 'm3', tag: '3', rText: `宏${m.m3.r.toFixed(1)}R · ${m.m3.shares}股`, warn: -0.15 }
+      ].forEach(item => {
+        const d = m[item.k];
+        const cUnit = evColor(d.ev, item.warn);
+        const cCum = evColor(d.cumR, item.warn * tradeCount);
+
+        document.getElementById(`evCard${item.tag}R`).textContent = item.rText;
+
+        const unitEl = document.getElementById(`evCard${item.tag}Unit`);
+        unitEl.textContent = formatSignedR(d.ev);
+        unitEl.style.color = cUnit;
+
+        const cumEl = document.getElementById(`evCard${item.tag}Cum`);
+        cumEl.textContent = `${d.cumR >= 0 ? '+' : ''}${d.cumR.toFixed(1)}R`;
+        cumEl.style.color = cCum;
+
+        const usdEl = document.getElementById(`evCard${item.tag}CumUsd`);
+        usdEl.textContent = formatSignedUsd(d.cumUsd);
+        usdEl.style.color = cCum;
+        usdEl.style.opacity = '0.8';
+
+        document.getElementById(`evCard${item.tag}CumLabel`).textContent = `${tradeCount}笔累计`;
+        document.getElementById(`evCard${item.tag}Be`).textContent = `${d.be.toFixed(1)}%`;
+      });
+    }
+
+    // 累计净值轨迹：三条直线即「笔数 × 单笔 EV」，零点虚线为盈亏平衡
+    function drawEvCurve() {
+      const box = canvasEv.parentElement;
+      const rect = box.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvasEv.width = Math.round(rect.width * dpr);
+      canvasEv.height = Math.round(rect.height * dpr);
+      const ctx = canvasEv.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const W = rect.width;
+      const H = rect.height;
+      const padL = 42, padR = 12, padT = 30, padB = 22;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+      ctx.clearRect(0, 0, W, H);
+
+      const m = getMetrics();
+      const pts1 = [], pts2 = [], pts3 = [];
+      for (let i = 0; i <= tradeCount; i++) {
+        pts1.push(i * m.m1.ev);
+        pts2.push(i * m.m2.ev);
+        pts3.push(i * m.m3.ev);
+      }
+
+      const all = pts1.concat(pts2, pts3, [0]);
+      const rawMax = Math.max.apply(null, all);
+      const rawMin = Math.min.apply(null, all);
+      const span = Math.max(8, rawMax - rawMin);
+      const yMax = rawMax + span * 0.18;
+      const yMin = rawMin - span * 0.18;
+
+      const xOf = (i) => padL + (i / tradeCount) * plotW;
+      const yOf = (v) => padT + ((yMax - v) / (yMax - yMin)) * plotH;
+
+      // 0R 盈亏平衡基准
+      const yZero = Math.round(yOf(0)) + 0.5;
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(209,212,220,0.35)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.moveTo(padL, yZero);
+      ctx.lineTo(padL + plotW, yZero);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.font = `400 ${FS_AXIS}px ${FONT_NUM}`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#D1D4DC';
+      ctx.fillText('0R', padL - 6, yZero);
+
+      ctx.fillStyle = '#6B7080';
+      ctx.fillText(`${Math.round(yMax)}R`, padL - 6, padT + 4);
+      ctx.fillText(`${Math.round(yMin)}R`, padL - 6, padT + plotH - 4);
+
+      // X 轴笔数刻度
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const stepTick = tradeCount === 20 ? 5 : 10;
+      for (let i = 0; i <= tradeCount; i += stepTick) {
+        const x = Math.round(xOf(i)) + 0.5;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + plotH);
+        ctx.stroke();
+        ctx.fillStyle = '#5D606B';
+        ctx.fillText(`${i}`, x, padT + plotH + 5);
+      }
+
+      const drawLine = (arr, color, fillTop) => {
+        if (fillTop) {
+          ctx.beginPath();
+          arr.forEach((v, i) => (i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v))));
+          ctx.lineTo(xOf(tradeCount), yZero);
+          ctx.lineTo(xOf(0), yZero);
+          ctx.closePath();
+          const grad = ctx.createLinearGradient(0, padT, 0, yZero);
+          grad.addColorStop(0, 'rgba(8,153,129,0.16)');
+          grad.addColorStop(1, 'rgba(8,153,129,0)');
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        arr.forEach((v, i) => (i === 0 ? ctx.moveTo(xOf(i), yOf(v)) : ctx.lineTo(xOf(i), yOf(v))));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.8;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        const endX = xOf(tradeCount);
+        const endY = yOf(arr[tradeCount]);
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(endX, endY, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      drawLine(pts2, '#F23645', false);
+      drawLine(pts3, '#F59E0B', false);
+      drawLine(pts1, '#089981', true);
+
+      // 悬停：竖线 + 三个交点 + 读数浮窗
+      if (evHoverIdx !== null && evHoverIdx >= 0 && evHoverIdx <= tradeCount) {
+        const hx = Math.round(xOf(evHoverIdx)) + 0.5;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(209,212,220,0.3)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(hx, padT);
+        ctx.lineTo(hx, padT + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        [[pts1, '#089981'], [pts3, '#F59E0B'], [pts2, '#F23645']].forEach(([arr, c]) => {
+          ctx.beginPath();
+          ctx.fillStyle = c;
+          ctx.arc(hx, yOf(arr[evHoverIdx]), 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        const lines = [
+          { t: `压缩 ${formatSignedR(pts1[evHoverIdx])}`, c: '#089981' },
+          { t: `嵌套 ${formatSignedR(pts3[evHoverIdx])}`, c: '#F59E0B' },
+          { t: `扩张 ${formatSignedR(pts2[evHoverIdx])}`, c: '#F23645' }
+        ];
+
+        ctx.font = `600 11px ${FONT_NUM}`;
+        const boxW = Math.max(...lines.map(l => ctx.measureText(l.t).width)) + 24;
+        const boxH = 62;
+        const bx = hx + boxW + 10 > padL + plotW ? hx - boxW - 8 : hx + 8;
+        const by = padT + 2;
+
+        ctx.fillStyle = 'rgba(11,14,20,0.94)';
+        ctx.strokeStyle = '#2A2E39';
+        ctx.lineWidth = 1;
+        rr(ctx, bx, by, boxW, boxH, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.font = `600 10.5px ${FONT_UI}`;
+        ctx.fillStyle = '#9AA0AE';
+        ctx.fillText(`第 ${evHoverIdx} 笔累计`, bx + 8, by + 5);
+
+        ctx.font = `600 11px ${FONT_NUM}`;
+        lines.forEach((l, i) => {
+          ctx.fillStyle = l.c;
+          ctx.fillText(l.t, bx + 8, by + 21 + i * 13);
+        });
+      }
+    }
+
+    canvasEv.addEventListener('mousemove', (e) => {
+      const rect = canvasEv.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left - 42) / (rect.width - 42 - 12)));
+      evHoverIdx = Math.round(ratio * tradeCount);
+      drawEvCurve();
+    });
+
+    canvasEv.addEventListener('mouseleave', () => {
+      evHoverIdx = null;
+      drawEvCurve();
+    });
+
+    // =========================================================================
+    // 3. HUD 实时 OHLC 同步刷新
+    // =========================================================================
+    function updateHud(model, barIdx) {
+      const map = { m1: 'hudM1', m2: 'hudM2', m3: 'hudM3' };
+      const prefix = map[model.id];
+      const idx = Math.max(0, Math.min(model.candles.length - 1, barIdx));
+      const [o, h, l, c, , phase] = model.candles[idx];
+      const isUp = c >= o;
+
+      document.getElementById(`${prefix}Phase`).textContent = phase;
+      document.getElementById(`${prefix}O`).textContent = o.toFixed(2);
+      document.getElementById(`${prefix}H`).textContent = h.toFixed(2);
+      document.getElementById(`${prefix}L`).textContent = l.toFixed(2);
+      const cEl = document.getElementById(`${prefix}C`);
+      cEl.textContent = c.toFixed(2);
+      cEl.className = isUp ? 'text-[#089981]' : 'text-[#F23645]';
+    }
+
+    // =========================================================================
+    // 4. TradingView 专业暗黑盘口 Canvas 渲染引擎（三图严格共享 1:1 Y 轴）
+    // =========================================================================
+    function drawChart(canvas, pane, model, mousePos) {
+      if (pane.classList.contains('hidden')) return;
+
+      const rect = pane.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const W = rect.width;
+      const H = rect.height;
+
+      const rightAxisW = 60;
+      const bottomAxisH = 22;
+      const topPad = 36;
+      const leftPad = 10;
+      const labelBoxes = [];   // 已占位标注，供结构节点自动避让
+      const plotW = W - leftPad - rightAxisW;
+      const plotH = H - topPad - bottomAxisH;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // 三图共享完全一致的 Y 轴价格区间 ($99.35 ~ $101.40+)
+      const minP = BASE_Y_MIN;
+      const maxP = Math.max(BASE_Y_MAX, targetPrice + 0.14);
+      const yOf = (p) => topPad + ((maxP - p) / (maxP - minP)) * plotH;
+      const pOfY = (y) => maxP - ((y - topPad) / plotH) * (maxP - minP);
+
+      const totalBars = model.candles.length;
+      const stepW = plotW / totalBars;
+      const xOf = (i) => leftPad + i * stepW + stepW / 2;
+
+      // --- A. 细微水平与垂直网格线 + 右侧价格轴 ---
+      ctx.font = `400 ${FS_AXIS}px ${FONT_NUM}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      for (let p = 99.40; p <= maxP; p += 0.20) {
+        const y = Math.round(yOf(p)) + 0.5;
+        if (y < topPad || y > topPad + plotH) continue;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(leftPad, y);
+        ctx.lineTo(leftPad + plotW, y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#878C9B';
+        ctx.fillText(p.toFixed(2), leftPad + plotW + 6, y);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let i = 0; i < totalBars; i += 6) {
+        const x = Math.round(xOf(i)) + 0.5;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.moveTo(x, topPad);
+        ctx.lineTo(x, topPad + plotH);
+        ctx.stroke();
+
+        const sec = (i * 5) % 60;
+        const min = 35 + Math.floor((i * 5) / 60);
+        ctx.fillStyle = '#7A7F8E';
+        ctx.fillText(`09:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`, x, topPad + plotH + 5);
+      }
+
+      // 坐标轴分割线
+      ctx.beginPath();
+      ctx.strokeStyle = '#1E222D';
+      ctx.lineWidth = 1;
+      ctx.moveTo(leftPad + plotW + 0.5, 0);
+      ctx.lineTo(leftPad + plotW + 0.5, H);
+      ctx.moveTo(0, topPad + plotH + 0.5);
+      ctx.lineTo(W, topPad + plotH + 0.5);
+      ctx.stroke();
+
+      // --- B. 结构包络框与多头仓位工具（按形态 1/2 与形态 3 分别精确绘制） ---
+      const xEntry = xOf(model.entryIdx);
+      const xRight = leftPad + plotW - 4;
+      const yEntry = yOf(model.entryPrice);
+      const yTarget = yOf(targetPrice);
+      const gainDist = Math.max(0.01, targetPrice - model.entryPrice);
+
+      if (model.id === 'm1' || model.id === 'm2') {
+        // 1) 包络框
+        const env = model.envelope;
+        const bx1 = xOf(env.startIdx) - stepW * 0.4;
+        const bx2 = xOf(env.endIdx) + stepW * 0.2;
+        const byTop = yOf(env.top);
+        const byBot = yOf(env.bottom);
+
+        ctx.fillStyle = env.fill;
+        ctx.fillRect(bx1, byTop, bx2 - bx1, byBot - byTop);
+        ctx.strokeStyle = env.stroke;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(bx1, byTop, bx2 - bx1, byBot - byTop);
+        ctx.setLineDash([]);
+
+        // 窄幅包络放框外下方，宽幅包络放框内顶部（底部要留给 STOP 与击穿锚点）
+        const tagY = model.id === 'm1' ? byBot + 12 : byTop + 16;
+        drawPill(ctx, env.tag, bx1 + 4, tagY, { color: env.stroke, align: 'left', maxRight: leftPad + plotW - 2, boxes: labelBoxes });
+
+        // 2) Long Position Tool 盈亏比色块
+        const yStop = yOf(model.stopPrice);
+        const stopDist = model.entryPrice - model.stopPrice;
+        const rMultiple = gainDist / stopDist;
+        const shares = Math.floor(riskBudget / stopDist);
+
+        ctx.fillStyle = 'rgba(8, 153, 129, 0.14)';
+        ctx.fillRect(xEntry, yTarget, xRight - xEntry, yEntry - yTarget);
+
+        ctx.fillStyle = 'rgba(242, 54, 69, 0.16)';
+        ctx.fillRect(xEntry, yEntry, xRight - xEntry, yStop - yEntry);
+
+        // 止损红虚线
+        ctx.beginPath();
+        ctx.strokeStyle = '#F23645';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(xOf(model.l1.idx), Math.round(yStop) + 0.5);
+        ctx.lineTo(leftPad + plotW, Math.round(yStop) + 0.5);
+        ctx.stroke();
+
+        // 目标绿虚线
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(8, 153, 129, 0.65)';
+        ctx.moveTo(xEntry, Math.round(yTarget) + 0.5);
+        ctx.lineTo(leftPad + plotW, Math.round(yTarget) + 0.5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        drawPill(ctx, `STOP $${model.stopPrice.toFixed(2)} (-$${stopDist.toFixed(2)})`, xEntry + 3, yStop - 12, { color: '#F23645', align: 'left', font: FONT_NUM, maxRight: leftPad + plotW - 2, boxes: labelBoxes });
+
+        // 动态 R 倍数徽章
+        const badgeText = model.id === 'm1'
+          ? `${rMultiple.toFixed(1)}R · ${shares}股`
+          : `${rMultiple.toFixed(1)}R (放弃) · ${shares}股`;
+        drawBadge(ctx, xEntry, xRight, yTarget, yEntry, topPad, badgeText, model.id === 'm1' ? 'rgba(8, 153, 129, 0.92)' : 'rgba(242, 54, 69, 0.92)');
+
+      } else {
+        // 形态 3：嵌套收缩 2B（外部大结构虚线框 + 内部子级琥珀色收缩框 + 脆弱止损与宏观止损对比）
+        const ob = model.outerBox;
+        const ox1 = xOf(ob.startIdx) - stepW * 0.4;
+        const ox2 = xOf(ob.endIdx) + stepW * 0.2;
+        const oyTop = yOf(ob.top);
+        const oyBot = yOf(ob.bottom);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.fillRect(ox1, oyTop, ox2 - ox1, oyBot - oyTop);
+        ctx.strokeStyle = 'rgba(209, 212, 220, 0.28)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(ox1, oyTop, ox2 - ox1, oyBot - oyTop);
+        ctx.setLineDash([]);
+
+        // 内部子级琥珀色收缩框 ($99.98 ~ $100.12)
+        const ib = model.innerBox;
+        const ix1 = xOf(ib.startIdx) - stepW * 0.3;
+        const ix2 = xOf(ib.endIdx) + stepW * 0.2;
+        const iyTop = yOf(ib.top);
+        const iyBot = yOf(ib.bottom);
+
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.12)';
+        ctx.fillRect(ix1, iyTop, ix2 - ix1, iyBot - iyTop);
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ix1, iyTop, ix2 - ix1, iyBot - iyTop);
+
+        drawPill(ctx, '子2B 收缩 $99.98–$100.12', ix1, iyTop - 12, { color: '#F59E0B', align: 'left', maxRight: leftPad + plotW - 2, boxes: labelBoxes });
+
+        // Long Position Tool 盈利区
+        const yFragileStop = yOf(model.fragileStopPrice);
+        const yMacroStop = yOf(model.macroStopPrice);
+        const fragileDist = model.entryPrice - model.fragileStopPrice; // $0.16
+        const macroDist = model.entryPrice - model.macroStopPrice;     // $0.64
+        const macroR = gainDist / macroDist;
+
+        ctx.fillStyle = 'rgba(8, 153, 129, 0.13)';
+        ctx.fillRect(xEntry, yTarget, xRight - xEntry, yEntry - yTarget);
+
+        // 脆弱止损风险区（琥珀半透明）
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.18)';
+        ctx.fillRect(xEntry, yEntry, xRight - xEntry, yFragileStop - yEntry);
+
+        // 真正宏观结构止损延伸区（极淡红斜纹感背景）
+        ctx.fillStyle = 'rgba(242, 54, 69, 0.08)';
+        ctx.fillRect(xEntry, yFragileStop, xRight - xEntry, yMacroStop - yFragileStop);
+
+        // 1) 脆弱止损琥珀虚线 ($99.96)
+        ctx.beginPath();
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(xOf(model.subL1.idx), Math.round(yFragileStop) + 0.5);
+        ctx.lineTo(leftPad + plotW, Math.round(yFragileStop) + 0.5);
+        ctx.stroke();
+
+        // 2) 宏观结构止损参考线 ($99.48)
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(242, 54, 69, 0.75)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(xOf(model.macroL1.idx), Math.round(yMacroStop) + 0.5);
+        ctx.lineTo(leftPad + plotW, Math.round(yMacroStop) + 0.5);
+        ctx.stroke();
+
+        // 目标绿虚线
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(8, 153, 129, 0.65)';
+        ctx.moveTo(xEntry, Math.round(yTarget) + 0.5);
+        ctx.lineTo(leftPad + plotW, Math.round(yTarget) + 0.5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 向下流动性磁铁扫损警示箭头（从脆弱止损 $99.96 指向下方 Macro L1 $99.50 缺口）
+        const magX = xEntry + 12;
+        ctx.beginPath();
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([2, 2]);
+        ctx.moveTo(magX, yFragileStop + 2);
+        ctx.lineTo(magX, yMacroStop - 14);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.fillStyle = '#F59E0B';
+        ctx.moveTo(magX, yMacroStop - 10);
+        ctx.lineTo(magX - 4, yMacroStop - 17);
+        ctx.lineTo(magX + 4, yMacroStop - 17);
+        ctx.closePath();
+        ctx.fill();
+
+        // 脆弱止损文字标注
+        drawPill(ctx, `脆止损 $${model.fragileStopPrice.toFixed(2)} · 易遭扫损`, xEntry + 18, yFragileStop + 13, { color: '#F59E0B', align: 'left', maxRight: leftPad + plotW - 2, boxes: labelBoxes });
+
+        // 真正宏观结构止损标注
+        drawPill(ctx, `宏止损 $${model.macroStopPrice.toFixed(2)} (需 $${macroDist.toFixed(2)} 宽 · 仅 ${macroR.toFixed(1)}R)`, xEntry + 3, yMacroStop + 12, { color: '#F23645', align: 'left', font: FONT_NUM, maxRight: leftPad + plotW - 2, boxes: labelBoxes });
+
+        drawBadge(ctx, xEntry, xRight, yTarget, yEntry, topPad, `宏结构仅 ${macroR.toFixed(1)}R · 慎做`, 'rgba(217, 119, 6, 0.92)');
+      }
+
+      // --- C. PMH 盘前高点基准线 ($100.00) & 颈线 ---
+      const yPmh = Math.round(yOf(PMH_PRICE)) + 0.5;
+      ctx.beginPath();
+      ctx.strokeStyle = '#26C6DA';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 4]);
+      ctx.moveTo(leftPad, yPmh);
+      ctx.lineTo(leftPad + plotW, yPmh);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      drawPriceTag(ctx, leftPad + plotW + 1, yPmh, '100.00', '#00838F', '#FFFFFF');
+      drawPill(ctx, 'PMH $100.00', leftPad + 3, yPmh - 12, { color: '#26C6DA', align: 'left', font: FONT_NUM, boxes: labelBoxes });
+
+      // 颈线（m1/m2 画 neck；m3 画 subNeck）
+      const neckObj = model.id === 'm3' ? model.subNeck : model.neck;
+      const yNeck = Math.round(yOf(neckObj.price)) + 0.5;
+      ctx.beginPath();
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]);
+      ctx.moveTo(xOf(neckObj.idx), yNeck);
+      ctx.lineTo(leftPad + plotW, yNeck);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      drawPriceTag(ctx, leftPad + plotW + 1, yNeck, neckObj.price.toFixed(2), '#B45309', '#FFFFFF');
+
+      // --- D. 底部低透明度成交量柱体 ---
+      const maxVol = 65;
+      const volZoneH = plotH * 0.12;
+      const volBottom = topPad + plotH;
+      const bodyW = Math.max(2.5, Math.floor(stepW * 0.60));
+
+      for (let i = 0; i < totalBars; i++) {
+        const [o, , , c, vol] = model.candles[i];
+        const isUp = c >= o;
+        const x = Math.round(xOf(i));
+        const vh = Math.max(2, (vol / maxVol) * volZoneH);
+        ctx.fillStyle = isUp ? 'rgba(8, 153, 129, 0.22)' : 'rgba(242, 54, 69, 0.22)';
+        ctx.fillRect(x - Math.floor(bodyW / 2), volBottom - vh, bodyW, vh);
+      }
+
+      // --- E. 专业低饱和蜡烛图（1px 锐利影线 + 精致实体） ---
+      for (let i = 0; i < totalBars; i++) {
+        const [o, h, l, c] = model.candles[i];
+        const isUp = c >= o;
+        const color = isUp ? '#089981' : '#F23645';
+        const x = Math.round(xOf(i));
+
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.moveTo(x + 0.5, Math.round(yOf(h)));
+        ctx.lineTo(x + 0.5, Math.round(yOf(l)));
+        ctx.stroke();
+
+        const yTop = Math.round(yOf(Math.max(o, c)));
+        const yBot = Math.round(yOf(Math.min(o, c)));
+        const hBody = Math.max(1.5, yBot - yTop);
+        ctx.fillStyle = color;
+        ctx.fillRect(x - Math.floor(bodyW / 2), yTop, bodyW, hBody);
+      }
+
+      // --- F. 关键微观结构节点标注（自动避让，避免标签互相压字） ---
+      const boxesHit = (a, b) => !(a.x2 <= b.x1 || a.x1 >= b.x2 || a.y2 <= b.y1 || a.y1 >= b.y2);
+
+      const drawNode = (node, isTop, color, offsetX = 0, showLabel = true) => {
+        const nx = Math.round(xOf(node.idx)) + 0.5;
+        const ny = yOf(node.price);
+        const dir = isTop ? -1 : 1;
+
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.arc(nx, ny + dir * 5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (!showLabel) return;
+
+        ctx.font = `600 ${FS_LABEL}px ${FONT_UI}`;
+        const tw = ctx.measureText(node.label).width;
+        const boxW = tw + 10;
+        const boxH = FS_LABEL + 6;
+        const cx = nx + offsetX;
+
+        // 候选纵向位置：先外侧，再逐级外推，最后尝试内侧
+        const tries = [];
+        for (let k = 0; k < 4; k++) tries.push(dir * (14 + k * (boxH + 5)));
+        for (let k = 0; k < 2; k++) tries.push(-dir * (14 + k * (boxH + 5)));
+
+        let cy = null;
+        for (const d of tries) {
+          const c = ny + d;
+          const box = { x1: cx - boxW / 2, x2: cx + boxW / 2, y1: c - boxH / 2, y2: c + boxH / 2 };
+          if (box.y1 < topPad + 2 || box.y2 > topPad + plotH - 2) continue;
+          if (labelBoxes.some(b => boxesHit(b, box))) continue;
+          cy = c; break;
+        }
+        if (cy === null) cy = ny + dir * 14;
+
+        // 锚点 → 标签的短引线
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1;
+        ctx.moveTo(nx, ny + dir * 7);
+        ctx.lineTo(nx, cy + (dir < 0 ? boxH / 2 : -boxH / 2));
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        drawPill(ctx, node.label, cx, cy, { color, align: 'center', boxes: labelBoxes });
+      };
+
+      if (model.id === 'm1' || model.id === 'm2') {
+        drawNode(model.l1, false, model.id === 'm1' ? '#26C6DA' : '#F23645', -4);
+        drawNode(model.neck, true, '#F59E0B', 0);
+        drawNode(model.hl, false, '#089981', 10);
+      } else {
+        // 子结构只留锚点圆：区间上下界已由框标签给出，三个文字标签在窄图里必然互相压字
+        drawNode(model.macroL1, false, '#F23645', 14);
+        drawNode(model.macroHigh, true, '#9CA3AF', 0);
+        drawNode(model.subL1, false, '#F59E0B', -8, false);
+        drawNode(model.subNeck, false, '#F59E0B', 6, false);  // 子颈线即内框上沿，已有框标签与轴价，文字省略
+        drawNode(model.subHl, false, '#089981', 12, false);
+      }
+
+      // ④ ENTRY 绿色向上箭头
+      const ex = Math.round(xEntry) + 0.5;
+      ctx.beginPath();
+      ctx.fillStyle = '#089981';
+      ctx.moveTo(ex, yEntry + 3);
+      ctx.lineTo(ex - 4, yEntry + 10);
+      ctx.lineTo(ex + 4, yEntry + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // ④ ENTRY 标注（与已有标注冲突时自动下移）
+      const entryText = `ENTRY $${model.entryPrice.toFixed(2)}`;
+      ctx.font = `600 ${FS_LABEL}px ${FONT_NUM}`;
+      const entryW = ctx.measureText(entryText).width + 10;
+      let entryCy = yEntry + 14;
+      for (let k = 0; k < 3; k++) {
+        const probe = { x1: ex + 14, x2: ex + 14 + entryW, y1: entryCy - 8.5, y2: entryCy + 8.5 };
+        if (!labelBoxes.some(b => boxesHit(b, probe))) break;
+        entryCy += 23;
+      }
+      drawPill(ctx, entryText, ex + 14, entryCy, { color: '#089981', align: 'left', font: FONT_NUM, maxRight: leftPad + plotW - 6, boxes: labelBoxes });
+
+      // --- G. 鼠标悬停十字星（Crosshair）与右侧价格轴动态标签 ---
+      if (mousePos && mousePos.x >= leftPad && mousePos.x <= leftPad + plotW && mousePos.y >= topPad && mousePos.y <= topPad + plotH) {
+        const hoverIdx = Math.max(0, Math.min(totalBars - 1, Math.floor((mousePos.x - leftPad) / stepW)));
+        const snapX = Math.round(xOf(hoverIdx)) + 0.5;
+        const snapY = Math.round(mousePos.y) + 0.5;
+        const hoverP = pOfY(snapY);
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(209, 212, 220, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.moveTo(snapX, topPad);
+        ctx.lineTo(snapX, topPad + plotH);
+        ctx.moveTo(leftPad, snapY);
+        ctx.lineTo(leftPad + plotW, snapY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        drawPriceTag(ctx, leftPad + plotW + 1, snapY, hoverP.toFixed(2), '#2A2E39', '#FFFFFF');
+      }
+    }
+
+    // 圆角矩形路径（Canvas 原生 roundRect 兼容性不可靠）
+    function rr(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // 带底衬的标注：小字压在线条/蜡烛上也能读清，替代原先裸文字
+    function drawPill(ctx, text, x, y, opts) {
+      const o = opts || {};
+      const color = o.color || '#D1D4DC';
+      const align = o.align || 'left';
+      const weight = o.weight || 600;
+      const font = o.font || FONT_UI;
+      const size = o.size || FS_LABEL;
+      const padX = 5;
+      const h = size + 6;
+
+      ctx.font = `${weight} ${size}px ${font}`;
+      const tw = ctx.measureText(text).width;
+      const boxW = Math.ceil(tw + padX * 2);
+      let left = align === 'center' ? x - boxW / 2 : x;
+      const maxRight = o.maxRight;
+      if (maxRight != null && left + boxW > maxRight) left = maxRight - boxW;
+      if (left < 2) left = 2;
+      left = Math.round(left);
+      const top = Math.round(y - h / 2);
+
+      ctx.fillStyle = 'rgba(11,14,20,0.86)';
+      rr(ctx, left, top, boxW, h, 4);
+      ctx.fill();
+      ctx.strokeStyle = color + '45';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.textAlign = align === 'center' ? 'center' : 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, align === 'center' ? left + boxW / 2 : left + padX, top + h / 2 + 0.5);
+
+      const box = { x1: left, y1: top, x2: left + boxW, y2: top + h };
+      if (o.boxes) o.boxes.push(box);
+      return box;
+    }
+
+    function drawBadge(ctx, xEntry, xRight, yTarget, yEntry, topPad, text, bgColor) {
+      ctx.font = `700 ${FS_BADGE}px ${FONT_UI}`;
+      const bw = ctx.measureText(text).width + 14;
+      const bh = 20;
+      const bx = xEntry + Math.max(2, (xRight - xEntry - bw) / 2);
+      const by = Math.max(topPad + 4, yTarget + Math.min(14, (yEntry - yTarget) * 0.25));
+
+      ctx.fillStyle = bgColor;
+      rr(ctx, bx, by, bw, bh, 4);
+      ctx.fill();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, bx + bw / 2, by + bh / 2 + 0.5);
+    }
+
+    function drawPriceTag(ctx, x, y, text, bgColor, textColor) {
+      const w = 56;
+      const h = 17;
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(x, Math.round(y - h / 2), w, h);
+      ctx.fillStyle = textColor;
+      ctx.font = `600 ${FS_AXIS}px ${FONT_NUM}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x + w / 2, y + 0.5);
+    }
+
+    function renderAll() {
+      drawChart(canvases.m1, panes.m1, MODEL_1, hoverState.m1);
+      drawChart(canvases.m2, panes.m2, MODEL_2, hoverState.m2);
+      drawChart(canvases.m3, panes.m3, MODEL_3, hoverState.m3);
+      drawEvCurve();
+    }
+
+    // =========================================================================
+    // 5. 三图独立十字星鼠标交互
+    // =========================================================================
+    function bindCanvasEvents(model) {
+      const key = model.id;
+      const canvas = canvases[key];
+      const pane = panes[key];
+
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = pane.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        hoverState[key] = { x: mx, y: my };
+
+        const plotW = rect.width - 10 - 60;
+        const stepW = plotW / model.candles.length;
+        const idx = Math.max(0, Math.min(model.candles.length - 1, Math.floor((mx - 10) / stepW)));
+        updateHud(model, idx);
+        renderAll();
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        hoverState[key] = null;
+        updateHud(model, model.entryIdx);
+        renderAll();
+      });
+    }
+
+    bindCanvasEvents(MODEL_1);
+    bindCanvasEvents(MODEL_2);
+    bindCanvasEvents(MODEL_3);
+
+    // =========================================================================
+    // 6. 窗口缩放自适应与安全初始化
+    // =========================================================================
+    window.addEventListener('resize', renderAll);
+
+    function init() {
+      updateHud(MODEL_1, MODEL_1.entryIdx);
+      updateHud(MODEL_2, MODEL_2.entryIdx);
+      updateHud(MODEL_3, MODEL_3.entryIdx);
+      updateEvStats();
+      // 窄屏三图竖向堆叠时每图只剩 1/3 屏高，标注必然挤在一起，默认进单图专注
+      if (window.innerWidth < 640) setLayoutMode('single');
+      renderAll();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

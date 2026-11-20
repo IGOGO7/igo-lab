@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XAU/USD & 宏观 CFD 全天24小时成交量波峰分布终端</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            terminal: {
+              bg: '#090d16',
+              panel: '#0f1623',
+              card: '#141d2e',
+              border: '#1e293b',
+              accent: '#38bdf8',
+              gold: '#f59e0b',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+              purple: '#a855f7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #090d16;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    /* 自定义滑块样式 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: #1e293b;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #090d16;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+      margin-top: -6px;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+      background: #7dd3fc;
+    }
+    .glass-panel {
+      background: linear-gradient(180deg, rgba(20, 29, 46, 0.85) 0%, rgba(15, 22, 35, 0.95) 100%);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .pulse-dot {
+      animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseRing {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(1.25); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- 顶部导航与全局控制栏 -->
+  <header class="border-b border-slate-800/90 bg-[#0b101b]/95 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <!-- 左侧标题与标的徽章 -->
+      <div class="flex items-start sm:items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-sky-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/5">
+          <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">XAU/USD & 宏观 CFD 日内成交量波峰时间轴</h1>
+            <span class="px-2 py-0.5 text-[11px] font-mono font-semibold rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">UTC+8 北京时间</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">24小时跨时区流动性引擎 · 亚欧美三大金融中心接力与微观结构分布</p>
+        </div>
+      </div>
+
+      <!-- 右侧控制组：冬/夏令时切换 + 实时时间同步 -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- 实时时间同步按钮 -->
+        <button id="btnSyncNow" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700/90 text-sky-300 border border-slate-700 transition flex items-center gap-1.5 shadow-sm" title="对齐当前北京时间">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+          <span>同步当前北京时间</span>
+          <span id="liveClockBadge" class="font-mono text-slate-300 ml-1">--:--</span>
+        </button>
+
+        <!-- 冬令时 / 夏令时 切换器 -->
+        <div class="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-800 shadow-inner" role="group">
+          <button id="btnWinter" onclick="setSeason('winter')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25">
+            <span>❄️ 冬令时 (11月当前)</span>
+          </button>
+          <button id="btnSummer" onclick="setSeason('summer')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white">
+            <span>☀️ 夏令时 (提前1h)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体内容区 -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-5 flex-1">
+
+    <!-- 顶部实时/游标状态诊断面板（随游标动态刷新） -->
+    <section class="glass-panel rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-1 h-full" id="statusAccentBar" style="background-color: #38bdf8;"></div>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+        <!-- 左侧当前选中时间与时段 -->
+        <div class="lg:col-span-4 space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">游标时间 (UTC+8)</span>
+            <span id="cursorModeTag" class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">实时同步中</span>
+          </div>
+          <div class="flex items-baseline gap-3">
+            <span id="displayTime" class="text-3xl sm:text-4xl font-mono font-bold text-white tracking-tight">22:20</span>
+            <span id="displayNextDay" class="text-xs font-mono text-slate-400 hidden">(次日)</span>
+            <span id="displaySessionBadge" class="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">最高峰 ③：欧美重叠主浪</span>
+          </div>
+        </div>
+
+        <!-- 中间核心量化指标：流动性指数 & 点差/滑点状态 -->
+        <div class="lg:col-span-4 grid grid-cols-2 gap-3 border-y lg:border-y-0 lg:border-x border-slate-800/80 py-3 lg:py-0 lg:px-4">
+          <div>
+            <div class="text-xs text-slate-400">相对成交量 / 活跃度</div>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span id="displayVolumePct" class="text-2xl font-mono font-bold text-sky-400">96%</span>
+              <span id="displayLiquidityLevel" class="text-xs font-medium text-emerald-400">极高流动性</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div id="displayVolumeBar" class="h-full rounded-full transition-all duration-200 bg-gradient-to-r from-sky-400 to-amber-400" style="width: 96%;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-400">点差与订单簿深度</div>
+            <div id="displaySpreadStatus" class="text-sm font-semibold text-white mt-1.5">点差极窄 · 深度最厚</div>
+            <div id="displaySlippageHint" class="text-xs text-slate-400 mt-1">适合大仓位突破与趋势跟随</div>
+          </div>
+        </div>
+
+        <!-- 右侧盘面微观结构提示 -->
+        <div class="lg:col-span-4 space-y-1">
+          <div class="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span>盘面典型微观行为与机构动作</span>
+          </div>
+          <p id="displayMicroBehavior" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            美股正式开盘与 COMEX 黄金期货主力交投共振，华尔街机构与美债收益率剧烈联动，订单失衡最清晰，全天核心单边主浪在此爆发。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 核心可视化图表区（横坐标为时间 06:00 -> 次日 06:00） -->
+    <section class="glass-panel rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4">
+      <!-- 图表头部图例与快捷波峰定位按钮 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-slate-800/80">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-semibold text-slate-400 mr-1">快速定位波峰：</span>
+          <button onclick="jumpToPeak(1)" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">
+            ① 亚盘沪金峰
+          </button>
+          <button onclick="jumpToPeak(2)" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition">
+            ② 欧盘伦敦开盘峰
+          </button>
+          <button onclick="jumpToPeak(3)" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition">
+            ③ 欧美重叠最高峰 (50%+量能)
+          </button>
+          <button onclick="jumpToPeak(4)" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition">
+            ④ 伦敦收盘结算峰
+          </button>
+        </div>
+        <div class="flex items-center gap-4 text-xs text-slate-400">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-gradient-to-r from-sky-400 to-amber-400 inline-block"></span> 相对成交量曲线</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> 关键事件锚点 (可点击)</span>
+        </div>
+      </div>
+
+      <!-- 响应式 Canvas 容器 -->
+      <div class="relative w-full h-[360px] sm:h-[430px] select-none" id="chartContainer">
+        <canvas id="volumeCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+        
+        <!-- 悬浮事件详情气泡 Tooltip -->
+        <div id="eventTooltip" class="hidden pointer-events-none absolute z-20 w-64 sm:w-72 p-3 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-md transition-opacity duration-150">
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <span id="tooltipTime" class="text-xs font-mono font-bold text-amber-400">21:30</span>
+            <span id="tooltipTag" class="px-1.5 py-0.5 text-[10px] rounded bg-slate-800 text-slate-300">核心脉冲</span>
+          </div>
+          <div id="tooltipTitle" class="text-sm font-bold text-white mb-1">美国核心宏观数据发布</div>
+          <p id="tooltipDesc" class="text-xs text-slate-300 leading-relaxed">CPI、非农（NFP）、初请失业金等数据准点公布，触发高频算法扫单，打出单分钟极高 Tick 峰值。</p>
+        </div>
+      </div>
+
+      <!-- 底部时间轴拖动滑块控制条 -->
+      <div class="pt-2 space-y-2">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span class="font-mono">06:00 (早盘开市)</span>
+          <span class="text-sky-300 font-medium flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+            </svg>
+            拖动滑块或直接点击上方图表任意时间点模拟盘面状态
+          </span>
+          <span class="font-mono">次日 06:00 (日线收盘)</span>
+        </div>
+        <div class="px-1">
+          <!-- 0 到 1440 分钟（从 06:00 开始偏移的分钟数） -->
+          <input type="range" id="timeSlider" min="0" max="1440" step="5" value="980" class="w-full" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 下方四大波峰深度解析卡片网格 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="peakCardsGrid">
+      <!-- 卡片由 JS 根据冬/夏令时动态渲染，保持时间与图表 100% 同步 -->
+    </section>
+
+  </main>
+
+  <!-- 页脚免责与数据口径说明 -->
+  <footer class="border-t border-slate-800/80 py-4 px-4 sm:px-6 text-center text-xs text-slate-500">
+    数据模型基于 COMEX 黄金期货（GC）真实成交手数分布与伦敦/纽约场外现货黄金（XAU/USD）机构 Tick 活跃度统计构建 · 仅作交易时段与市场微观结构教学参考
+  </footer>
+
+  <script>
+    // =========================================================================
+    // 1. 全局状态与配置定义
+    // =========================================================================
+    let currentSeason = 'winter'; // 'winter' (冬令时, 11月默认) | 'summer' (夏令时)
+    let offsetMinutes = 980;      // 距离当日 06:00 的分钟数 (0 ~ 1440)，默认 22:20 -> (22-6)*60 + 20 = 980
+    let isManualCursor = false;   // 用户是否手动拖动/点击过时间轴
+    let hoveredEvent = null;      // 当前鼠标悬停的锚点事件
+    let renderedAnchors = [];     // 存储每帧渲染的锚点屏幕坐标用于碰撞检测
+
+    const canvas = document.getElementById('volumeCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('chartContainer');
+    const timeSlider = document.getElementById('timeSlider');
+    const tooltip = document.getElementById('eventTooltip');
+
+    // =========================================================================
+    // 2. 冬/夏令时核心数据模型（横坐标：距离 06:00 的分钟数，0 = 06:00, 1440 = 次日 06:00）
+    // =========================================================================
+    function getSeasonConfig(season) {
+      const shift = season === 'summer' ? -60 : 0; // 夏令时欧美节点整体提前 60 分钟
+
+      // 4 大波峰区间定义
+      const peaks = [
+        {
+          id: 1,
+          name: '波峰 ①：亚盘启动与沪金共振峰',
+          shortName: '波峰 ① 亚盘沪金峰',
+          startMin: 150, // 08:30 (固定不受欧美夏令时影响)
+          endMin: 210,   // 09:30
+          timeLabel: '08:30 – 09:30',
+          share: '约 10% 量能',
+          color: '#06b6d4', // Cyan
+          bgRgba: 'rgba(6, 182, 212, 0.13)',
+          borderRgba: 'rgba(6, 182, 212, 0.45)',
+          keyTrigger: '09:00 上海黄金交易所 (SGE) & 沪金期货开盘',
+          summary: '东京、新加坡机构恢复报价；09:00 国内外盘价差套利单集中撮合，打出早盘短促量能脉冲，随后迅速衰减。',
+          focusMin: 180 // 09:00
+        },
+        {
+          id: 2,
+          name: '波峰 ②：欧盘启动与伦敦开盘峰',
+          shortName: '波峰 ② 伦敦开盘峰',
+          startMin: 570 + shift, // 冬令时 15:30 (570) / 夏令时 14:30 (510)
+          endMin: 690 + shift,   // 冬令时 17:30 (690) / 夏令时 16:30 (630)
+          timeLabel: season === 'winter' ? '15:30 – 17:30' : '14:30 – 16:30',
+          share: '约 22% 量能',
+          color: '#3b82f6', // Blue
+          bgRgba: 'rgba(59, 130, 246, 0.14)',
+          borderRgba: 'rgba(59, 130, 246, 0.5)',
+          keyTrigger: season === 'winter' ? '15:30 欧陆银行启动 / 16:00 伦敦现货开盘' : '14:30 欧陆银行启动 / 15:00 伦敦现货开盘',
+          summary: '全天第一个具备趋势延续性的波峰。大资金常先扫掉亚盘高低点止损池（Asian Range Sweep），随后确立欧盘方向。',
+          focusMin: 600 + shift // 16:00 / 15:00
+        },
+        {
+          id: 3,
+          name: '波峰 ③：欧美重叠与美股开盘最高峰',
+          shortName: '波峰 ③ 欧美重叠最高峰',
+          startMin: 915 + shift,  // 冬令时 21:15 (915) / 夏令时 20:15 (855)
+          endMin: 1080 + shift,   // 冬令时 00:00 (1080) / 夏令时 23:00 (1020)
+          timeLabel: season === 'winter' ? '21:15 – 00:00' : '20:15 – 23:00',
+          share: '全天 50%+ 量能',
+          color: '#f59e0b', // Amber Gold
+          bgRgba: 'rgba(245, 158, 11, 0.16)',
+          borderRgba: 'rgba(245, 158, 11, 0.55)',
+          keyTrigger: season === 'winter' ? '21:30 美国核心数据 / 22:30 美股开盘' : '20:30 美国核心数据 / 21:30 美股开盘',
+          summary: '订单簿厚度最大、点差最窄、订单失衡最剧烈的全天巅峰窗口，几乎所有日内大级别突破与核心单边主浪在此爆发。',
+          focusMin: 990 + shift // 22:30 / 21:30
+        },
+        {
+          id: 4,
+          name: '波峰 ④：伦敦收盘与期货结算峰',
+          shortName: '波峰 ④ 伦敦收盘结算峰',
+          startMin: 1080 + shift, // 冬令时 00:00 (1080) / 夏令时 23:00 (1020)
+          endMin: 1230 + shift,   // 冬令时 02:30 (1230) / 夏令时 01:30 (1170)
+          timeLabel: season === 'winter' ? '00:00 – 02:30' : '23:00 – 01:30',
+          share: '约 12% 量能',
+          color: '#a855f7', // Purple
+          bgRgba: 'rgba(168, 85, 247, 0.14)',
+          borderRgba: 'rgba(168, 85, 247, 0.5)',
+          keyTrigger: season === 'winter' ? '00:00 伦敦收盘 / 02:30 COMEX 期货结算' : '23:00 伦敦收盘 / 01:30 COMEX 期货结算',
+          summary: '欧洲交易员日内平仓结账及伦敦定盘价撮合。若前一波走出单边急涨急跌，此时极易出现获利了结引发的 V 型反转。',
+          focusMin: 1080 + shift // 00:00 / 23:00
+        }
+      ];
+
+      // 关键时间事件锚点（显示在曲线上方，支持悬停与点击）
+      const anchors = [
+        {
+          min: 180, // 09:00
+          timeStr: '09:00',
+          label: '09:00 沪金 SGE 开盘',
+          tag: '波峰 ① 核心',
+          color: '#22d3ee',
+          desc: '上海黄金交易所（SGE）与上期所沪金期货开盘，内外盘套利单集中进场，打出亚盘最明显的短促脉冲。'
+        },
+        {
+          min: 600 + shift, // 冬 16:00 / 夏 15:00
+          timeStr: season === 'winter' ? '16:00' : '15:00',
+          label: season === 'winter' ? '16:00 伦敦开盘' : '15:00 伦敦开盘',
+          tag: '波峰 ② 核心',
+          color: '#60a5fa',
+          desc: '伦敦金融城现货黄金正式开盘（15:30/14:30 欧陆银行已提前预热），机构开始猎杀亚盘区间高低点止损。'
+        },
+        {
+          min: 930 + shift, // 冬 21:30 / 夏 20:30
+          timeStr: season === 'winter' ? '21:30' : '20:30',
+          label: season === 'winter' ? '21:30 美国数据' : '20:30 美国数据',
+          tag: '波峰 ③ 脉冲',
+          color: '#fb923c',
+          desc: '美国 CPI、非农（NFP）、零售销售、初请失业金准点发布，高频算法瞬间扫单，往往打出全天单分钟最高 Tick 跳动。'
+        },
+        {
+          min: 990 + shift, // 冬 22:30 / 夏 21:30
+          timeStr: season === 'winter' ? '22:30' : '21:30',
+          label: season === 'winter' ? '22:30 美股开盘' : '21:30 美股开盘',
+          tag: '全天最高峰',
+          color: '#fbbf24',
+          desc: '美股正式开盘 & COMEX 黄金期货主力交投高峰，与美债收益率、美元指数强联动，全天流动性最深、主趋势爆发点。'
+        },
+        {
+          min: 1080 + shift, // 冬 00:00 / 夏 23:00
+          timeStr: season === 'winter' ? '00:00' : '23:00',
+          label: season === 'winter' ? '00:00 伦敦收盘' : '23:00 伦敦收盘',
+          tag: '波峰 ④ 反转点',
+          color: '#c084fc',
+          desc: '伦敦现货市场正式收盘（London Close），欧洲机构集中平仓结账，日内单边行情常在此触发阶段性见顶或见底反转。'
+        },
+        {
+          min: 1230 + shift, // 冬 02:30 / 夏 01:30
+          timeStr: season === 'winter' ? '02:30' : '01:30',
+          label: season === 'winter' ? '02:30 COMEX 结算' : '01:30 COMEX 结算',
+          tag: '尾盘脉冲',
+          color: '#a78bfa',
+          desc: 'COMEX 黄金期货主力合约计算每日结算价（美东 13:30），机构调仓单集中撮合，打出尾盘最后一个小尖峰后进入休眠。'
+        }
+      ];
+
+      return { shift, peaks, anchors };
+    }
+
+    // =========================================================================
+    // 3. 连续平滑相对成交量曲线函数 (返回 0 ~ 100 指数)
+    // =========================================================================
+    function getVolumeAtMinute(m, season) {
+      const shift = season === 'summer' ? -60 : 0;
+
+      // 高斯脉冲辅助函数
+      const gauss = (x, mu, sigma, amp) => amp * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+
+      // 基础底噪（清晨 06:00 最低，欧盘白天基础水位略高于亚盘）
+      let base = 8 + 4 * Math.sin((m / 1440) * Math.PI);
+
+      // 1. 亚盘沪金共振峰 (固定 08:30 - 09:30, 中心 09:00 = 180)
+      const p1 = gauss(m, 180, 26, 26);
+
+      // 2. 欧盘启动与伦敦开盘峰 (中心 16:00/15:00 = 600+shift, 延续至欧盘午间平台)
+      const p2_open = gauss(m, 605 + shift, 42, 46);
+      const p2_mid  = gauss(m, 710 + shift, 85, 24); // 欧盘午盘维持一定水位
+
+      // 3. 欧美重叠与美股开盘最高峰
+      const p3_data  = gauss(m, 930 + shift, 24, 52);  // 21:30 / 20:30 美国数据尖峰
+      const p3_stock = gauss(m, 995 + shift, 48, 84);  // 22:30 / 21:30 美股开盘主峰
+
+      // 4. 伦敦收盘与 COMEX 结算峰
+      const p4_ldn   = gauss(m, 1085 + shift, 30, 44); // 00:00 / 23:00 伦敦收盘
+      const p4_comex = gauss(m, 1225 + shift, 22, 24); // 02:30 / 01:30 COMEX 结算
+
+      // 尾盘衰减抑制 (03:00 之后快速进入休眠)
+      let tailDamp = 1.0;
+      if (m > 1260 + shift) {
+        tailDamp = Math.max(0.35, 1 - (m - (1260 + shift)) / 240);
+      }
+      if (m < 110) {
+        tailDamp = 0.55 + 0.45 * (m / 110);
+      }
+
+      let total = (base + p1 + p2_open + p2_mid + p3_data + p3_stock + p4_ldn + p4_comex) * tailDamp;
+      return Math.min(99, Math.max(5, Math.round(total * 10) / 10));
+    }
+
+    // =========================================================================
+    // 4. 获取任意时刻的微观结构诊断文本
+    // =========================================================================
+    function getDiagnosticsAtMinute(m, season) {
+      const shift = season === 'summer' ? -60 : 0;
+      const vol = getVolumeAtMinute(m, season);
+
+      // 判断所处区间
+      if (m < 150) {
+        return {
+          session: '极低谷停滞期（悉尼交接）',
+          badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
+          barColor: '#64748b',
+          liqText: '极度枯竭',
+          liqColor: 'text-rose-400',
+          spread: '点差大幅扩大 · 深度极薄',
+          slippage: '易出现无意义跳空与高滑点，建议观望',
+          micro: '全球主流银行交割切换窗口，几乎无机构主动成交量，价格容易被零星小单打出异常毛刺。'
+        };
+      } else if (m >= 150 && m <= 210) {
+        return {
+          session: '小波峰 ①：亚盘启动与沪金共振',
+          badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+          barColor: '#06b6d4',
+          liqText: '短促脉冲回升',
+          liqColor: 'text-cyan-400',
+          spread: '点差恢复正常 · 中等深度',
+          slippage: '适合捕捉隔夜尾盘惯性，不宜追大单边',
+          micro: '09:00 上海黄金交易所（SGE）与沪金期货开盘，国内外盘价差套利单集中撮合，打出早盘短暂量能脉冲。'
+        };
+      } else if (m > 210 && m < 570 + shift) {
+        return {
+          session: '低谷横盘期（亚盘午间整理）',
+          badgeColor: 'bg-slate-800 text-slate-300 border-slate-700',
+          barColor: '#38bdf8',
+          liqText: '偏低（积累流动性）',
+          liqColor: 'text-amber-300',
+          spread: '点差平稳 · 订单簿较薄',
+          slippage: '真突破概率低，谨防假突破诱多/诱空',
+          micro: '机构交投清淡，价格多在窄幅箱体内震荡，上下方不断积累散户止损单，构筑完整的 Asian Range 流动性池。'
+        };
+      } else if (m >= 570 + shift && m <= 690 + shift) {
+        return {
+          session: '主波峰 ②：欧盘启动与伦敦开盘',
+          badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+          barColor: '#3b82f6',
+          liqText: '显著放量（首波趋势）',
+          liqColor: 'text-blue-400',
+          spread: '点差收窄 · 机构深度入场',
+          slippage: '日内首个高胜率窗口，关注亚盘高低点猎杀',
+          micro: '欧陆银行算法上线与伦敦现货黄金正式开盘，大资金通常会先扫掉亚盘高低点止损（Sweep），随后确立欧盘真实方向。'
+        };
+      } else if (m > 690 + shift && m < 915 + shift) {
+        return {
+          session: '温和回落期（欧盘午间中继）',
+          badgeColor: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+          barColor: '#6366f1',
+          liqText: '中等稳健',
+          liqColor: 'text-indigo-300',
+          spread: '点差稳定 · 流动性良好',
+          slippage: '适合持有欧盘底仓或等待美盘前回调布局',
+          micro: '欧洲午间量能较开盘有所回落，但仍明显高于亚盘，盘面多表现为趋势中继旗形整理，等待北美资金接力。'
+        };
+      } else if (m >= 915 + shift && m <= 1080 + shift) {
+        return {
+          session: '最高峰 ③：欧美重叠与美股开盘',
+          badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+          barColor: '#f59e0b',
+          liqText: '全天巅峰（50%+ 量能）',
+          liqColor: 'text-emerald-400',
+          spread: '点差最窄 · 订单簿最厚',
+          slippage: '全天黄金出击窗口（注意 21:30/20:30 数据瞬间滑点）',
+          micro: '美国宏观数据发布 + 美股正式开盘 + COMEX 期货主力交投共振，美元与美债收益率剧烈联动，全天核心单边主浪在此爆发。'
+        };
+      } else if (m > 1080 + shift && m <= 1230 + shift) {
+        return {
+          session: '次波峰 ④：伦敦收盘与期货结算',
+          badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+          barColor: '#a855f7',
+          liqText: '局部次高峰（平仓盘）',
+          liqColor: 'text-purple-400',
+          spread: '点差正常 · 双向换手剧烈',
+          slippage: '警惕单边趋势获利了结引发的 V 型反转',
+          micro: '伦敦现货市场收盘、欧洲交易员日内结账以及 COMEX 期货每日结算价撮合，前期单边盈利盘集中兑现，极易出现反向抽回。'
+        };
+      } else {
+        return {
+          session: '深度低谷衰减期（美盘尾盘）',
+          badgeColor: 'bg-slate-800 text-slate-400 border-slate-700',
+          barColor: '#475569',
+          liqText: '快速枯竭',
+          liqColor: 'text-slate-400',
+          spread: '临近收盘点差逐步走阔',
+          slippage: '除美联储 FOMC 议息夜外，建议停止开新仓',
+          micro: '欧美机构均已离场，市场进入无量阴跌或横盘收尾阶段，直至清晨 06:00 进入下一个交易日循环。'
+        };
+      }
+    }
+
+    // =========================================================================
+    // 5. 时间格式化工具 (offsetMinutes 0 = 06:00, 1440 = 次日 06:00)
+    // =========================================================================
+    function formatOffsetToTime(offsetMin) {
+      const totalMinutesFromMidnight = (6 * 60 + Math.round(offsetMin)) % 1440;
+      const hh = Math.floor(totalMinutesFromMidnight / 60);
+      const mm = totalMinutesFromMidnight % 60;
+      const isNextDay = (6 * 60 + Math.round(offsetMin)) >= 1440;
+      return {
+        str: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`,
+        isNextDay
+      };
+    }
+
+    function getCurrentBeijingOffset() {
+      // 获取当前 UTC+8 北京时间
+      const now = new Date();
+      const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+      const bjDate = new Date(utcMs + 8 * 3600000);
+      const hh = bjDate.getHours();
+      const mm = bjDate.getMinutes();
+
+      // 映射到 [06:00, 次日 06:00] 区间 -> [0, 1440]
+      let diffHours = hh - 6;
+      if (diffHours < 0) diffHours += 24;
+      return {
+        offset: diffHours * 60 + mm,
+        clockStr: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+      };
+    }
+
+    // =========================================================================
+    // 6. Canvas 高清绘制引擎
+    // =========================================================================
+    function drawChart() {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+
+      // 图表内边距（留出顶部锚点标签空间和底部X轴时间刻度）
+      const pad = {
+        top: 52,
+        right: width < 640 ? 18 : 32,
+        bottom: 44,
+        left: width < 640 ? 38 : 52
+      };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const { peaks, anchors } = getSeasonConfig(currentSeason);
+
+      // 坐标映射函数
+      const xOf = (m) => pad.left + (m / 1440) * plotW;
+      const yOf = (v) => pad.top + plotH - (v / 100) * plotH;
+
+      // --- A. 绘制 Y 轴横向网格线与百分比标签 ---
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.font = '11px "JetBrains Mono", monospace';
+      for (let v = 0; v <= 100; v += 25) {
+        const y = yOf(v);
+        ctx.beginPath();
+        ctx.strokeStyle = v === 0 ? 'rgba(148, 163, 184, 0.35)' : 'rgba(51, 65, 85, 0.45)';
+        ctx.lineWidth = 1;
+        if (v > 0) ctx.setLineDash([4, 4]);
+        else ctx.setLineDash([]);
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + plotW, y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(`${v}%`, pad.left - 8, y);
+      }
+      ctx.setLineDash([]);
+
+      // --- B. 绘制 4 大核心交易量波峰高亮区块 ---
+      peaks.forEach((p) => {
+        const x1 = xOf(p.startMin);
+        const x2 = xOf(p.endMin);
+        const boxW = x2 - x1;
+
+        // 垂直渐变背景带
+        const zoneGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+        zoneGrad.addColorStop(0, p.bgRgba);
+        zoneGrad.addColorStop(1, 'rgba(15, 23, 42, 0.02)');
+        ctx.fillStyle = zoneGrad;
+        ctx.fillRect(x1, pad.top, boxW, plotH);
+
+        // 左右边界虚线
+        ctx.beginPath();
+        ctx.strokeStyle = p.borderRgba;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(x1, pad.top);
+        ctx.lineTo(x1, pad.top + plotH);
+        ctx.moveTo(x2, pad.top);
+        ctx.lineTo(x2, pad.top + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 顶部波峰编号徽标（宽屏时显示完整短名，窄屏显示编号）
+        ctx.fillStyle = p.color;
+        ctx.font = '600 10px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        const badgeText = width < 768 ? `波峰 ①②③④`[p.id + 2] ? `波峰 ${['①','②','③','④'][p.id-1]}` : p.shortName : p.shortName;
+        ctx.fillText(badgeText, x1 + boxW / 2, pad.top + 14);
+      });
+
+      // --- C. 绘制 X 轴时间刻度（06:00 到 次日 06:00，每 2 小时主刻度，每 1 小时次刻度） ---
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let m = 0; m <= 1440; m += 60) {
+        const x = xOf(m);
+        const isMajor = m % 120 === 0 || width >= 900;
+
+        // 刻度短线
+        ctx.beginPath();
+        ctx.strokeStyle = isMajor ? 'rgba(148, 163, 184, 0.4)' : 'rgba(71, 85, 105, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(x, pad.top + plotH);
+        ctx.lineTo(x, pad.top + plotH + (isMajor ? 6 : 3));
+        ctx.stroke();
+
+        if (isMajor) {
+          const tObj = formatOffsetToTime(m);
+          ctx.fillStyle = (m === 0 || m === 1440) ? '#94a3b8' : '#64748b';
+          ctx.font = '11px "JetBrains Mono", monospace';
+          ctx.fillText(tObj.str, x, pad.top + plotH + 10);
+
+          if (m === 1080) { // 00:00 零点分界线标注
+            ctx.fillStyle = '#475569';
+            ctx.font = '9px "Inter", sans-serif';
+            ctx.fillText('次日', x, pad.top + plotH + 24);
+          }
+        }
+      }
+
+      // --- D. 绘制成交量渐变面积与高对比主曲线 ---
+      const step = 3; // 每 3 分钟采样一次保证极其顺滑
+      ctx.beginPath();
+      ctx.moveTo(xOf(0), yOf(0));
+      for (let m = 0; m <= 1440; m += step) {
+        const v = getVolumeAtMinute(m, currentSeason);
+        ctx.lineTo(xOf(m), yOf(v));
+      }
+      ctx.lineTo(xOf(1440), yOf(0));
+      ctx.closePath();
+
+      const areaGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+      areaGrad.addColorStop(0, 'rgba(245, 158, 11, 0.32)');
+      areaGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.16)');
+      areaGrad.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
+      ctx.fillStyle = areaGrad;
+      ctx.fill();
+
+      // 绘制主折线
+      ctx.beginPath();
+      for (let m = 0; m <= 1440; m += step) {
+        const v = getVolumeAtMinute(m, currentSeason);
+        if (m === 0) ctx.moveTo(xOf(m), yOf(v));
+        else ctx.lineTo(xOf(m), yOf(v));
+      }
+      const lineGrad = ctx.createLinearGradient(pad.left, 0, pad.left + plotW, 0);
+      lineGrad.addColorStop(0, '#38bdf8');
+      lineGrad.addColorStop(0.42, '#60a5fa');
+      lineGrad.addColorStop(0.68, '#f59e0b');
+      lineGrad.addColorStop(0.85, '#c084fc');
+      lineGrad.addColorStop(1, '#475569');
+
+      ctx.strokeStyle = lineGrad;
+      ctx.lineWidth = 2.8;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // --- E. 绘制关键事件锚点（圆点 + 引线 + 胶囊标签） ---
+      renderedAnchors = [];
+      anchors.forEach((anc, idx) => {
+        const ax = xOf(anc.min);
+        const av = getVolumeAtMinute(anc.min, currentSeason);
+        const ay = yOf(av);
+
+        // 错开相邻标签高度防止重叠（尤其是 21:30 美国数据与 22:30 美股开盘、00:00 伦敦收盘）
+        const tierOffsets = [32, 34, 44, 26, 44, 32];
+        const labelY = Math.max(14, ay - tierOffsets[idx % tierOffsets.length]);
+
+        // 垂直引导虚线
+        ctx.beginPath();
+        ctx.strokeStyle = anc.color;
+        ctx.globalAlpha = 0.65;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 2]);
+        ctx.moveTo(ax, ay - 5);
+        ctx.lineTo(ax, labelY + 10);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        // 曲线上的发光锚点圆圈
+        ctx.beginPath();
+        ctx.fillStyle = '#090d16';
+        ctx.arc(ax, ay, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = anc.color;
+        ctx.arc(ax, ay, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 计算胶囊标签宽度
+        ctx.font = '600 10.5px "Inter", sans-serif';
+        const displayLabel = width < 640 ? anc.timeStr : anc.label;
+        const textW = ctx.measureText(displayLabel).width;
+        const pillW = textW + 12;
+        const pillH = 19;
+        // 防止右侧超出画布
+        let pillX = ax - pillW / 2;
+        if (pillX + pillW > width - 6) pillX = width - pillW - 6;
+        if (pillX < 6) pillX = 6;
+        const pillY = labelY - pillH / 2;
+
+        const isHovered = hoveredEvent && hoveredEvent.min === anc.min;
+
+        // 绘制胶囊背景
+        ctx.fillStyle = isHovered ? anc.color : 'rgba(15, 23, 42, 0.92)';
+        ctx.strokeStyle = anc.color;
+        ctx.lineWidth = isHovered ? 1.5 : 1;
+        roundRect(ctx, pillX, pillY, pillW, pillH, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        // 绘制胶囊文字
+        ctx.fillStyle = isHovered ? '#090d16' : '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayLabel, pillX + pillW / 2, pillY + pillH / 2 + 0.5);
+
+        // 记录命中区域供交互使用
+        renderedAnchors.push({
+          ...anc,
+          hitX: pillX - 4,
+          hitY: pillY - 4,
+          hitW: pillW + 8,
+          hitH: Math.max(pillH + 8, ay - pillY + 10),
+          screenX: ax,
+          screenY: pillY
+        });
+      });
+
+      // --- F. 绘制当前时间 / 拖动游标的垂直指示线 ---
+      const cx = xOf(offsetMinutes);
+      const cv = getVolumeAtMinute(offsetMinutes, currentSeason);
+      const cy = yOf(cv);
+
+      // 发光垂直线
+      ctx.beginPath();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.8;
+      ctx.moveTo(cx, pad.top - 6);
+      ctx.lineTo(cx, pad.top + plotH);
+      ctx.stroke();
+
+      // 交点光晕圆环
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = '#38bdf8';
+      ctx.strokeStyle = '#090d16';
+      ctx.lineWidth = 2;
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 顶部游标时间小浮标
+      const curTimeObj = formatOffsetToTime(offsetMinutes);
+      const badgeStr = `${curTimeObj.str} · ${Math.round(cv)}%`;
+      ctx.font = '700 11px "JetBrains Mono", monospace';
+      const bw = ctx.measureText(badgeStr).width + 14;
+      const bh = 20;
+      let bx = cx - bw / 2;
+      if (bx < pad.left) bx = pad.left;
+      if (bx + bw > pad.left + plotW) bx = pad.left + plotW - bw;
+
+      ctx.fillStyle = '#38bdf8';
+      roundRect(ctx, bx, pad.top - 24, bw, bh, 5);
+      ctx.fill();
+
+      ctx.fillStyle = '#090d16';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeStr, bx + bw / 2, pad.top - 14);
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    // =========================================================================
+    // 7. 同步刷新顶部诊断面板与下方波峰卡片
+    // =========================================================================
+    function updateUI() {
+      const tObj = formatOffsetToTime(offsetMinutes);
+      const vol = getVolumeAtMinute(offsetMinutes, currentSeason);
+      const diag = getDiagnosticsAtMinute(offsetMinutes, currentSeason);
+
+      document.getElementById('displayTime').textContent = tObj.str;
+      const nextDayEl = document.getElementById('displayNextDay');
+      if (tObj.isNextDay) nextDayEl.classList.remove('hidden');
+      else nextDayEl.classList.add('hidden');
+
+      const sessionBadge = document.getElementById('displaySessionBadge');
+      sessionBadge.textContent = diag.session;
+      sessionBadge.className = `px-2.5 py-1 rounded-md text-xs font-semibold border ${diag.badgeColor}`;
+
+      document.getElementById('statusAccentBar').style.backgroundColor = diag.barColor;
+      document.getElementById('displayVolumePct').textContent = `${Math.round(vol)}%`;
+      document.getElementById('displayVolumeBar').style.width = `${Math.round(vol)}%`;
+
+      const liqEl = document.getElementById('displayLiquidityLevel');
+      liqEl.textContent = diag.liqText;
+      liqEl.className = `text-xs font-medium ${diag.liqColor}`;
+
+      document.getElementById('displaySpreadStatus').textContent = diag.spread;
+      document.getElementById('displaySlippageHint').textContent = diag.slippage;
+      document.getElementById('displayMicroBehavior').textContent = diag.micro;
+
+      const cursorTag = document.getElementById('cursorModeTag');
+      if (isManualCursor) {
+        cursorTag.textContent = '手动模拟游标';
+        cursorTag.className = 'px-1.5 py-0.5 text-[10px] font-mono rounded bg-amber-500/15 text-amber-300 border border-amber-500/30';
+      } else {
+        cursorTag.textContent = '实时北京时间';
+        cursorTag.className = 'px-1.5 py-0.5 text-[10px] font-mono rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      }
+
+      timeSlider.value = offsetMinutes;
+      drawChart();
+    }
+
+    function renderPeakCards() {
+      const { peaks } = getSeasonConfig(currentSeason);
+      const grid = document.getElementById('peakCardsGrid');
+      grid.innerHTML = peaks.map(p => `
+        <div onclick="jumpToPeak(${p.id})" class="glass-panel rounded-xl p-4 hover:border-slate-500/80 transition cursor-pointer group flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="px-2 py-0.5 rounded text-xs font-mono font-bold" style="background-color: ${p.bgRgba}; color: ${p.color}; border: 1px solid ${p.borderRgba};">
+                ${p.timeLabel}
+              </span>
+              <span class="text-[11px] font-mono text-slate-400">${p.share}</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-sky-300 transition mb-1.5">${p.name}</h3>
+            <div class="text-xs font-medium text-amber-300/90 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800 mb-2.5">
+              ⚡ ${p.keyTrigger}
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">${p.summary}</p>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 group-hover:text-sky-400 transition">
+            <span>点击定位游标至此波峰</span>
+            <span>→</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 8. 交互控制逻辑（冬/夏令时切换、滑块拖动、Canvas 点击与悬停）
+    // =========================================================================
+    function setSeason(season) {
+      currentSeason = season;
+      const btnWinter = document.getElementById('btnWinter');
+      const btnSummer = document.getElementById('btnSummer');
+
+      if (season === 'winter') {
+        btnWinter.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 bg-sky-500 text-slate-950 shadow-md shadow-sky-500/25';
+        btnSummer.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white';
+      } else {
+        btnSummer.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-md shadow-amber-500/25';
+        btnWinter.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-400 hover:text-white';
+      }
+
+      renderPeakCards();
+      updateUI();
+    }
+
+    function jumpToPeak(peakId) {
+      const { peaks } = getSeasonConfig(currentSeason);
+      const target = peaks.find(p => p.id === peakId);
+      if (target) {
+        isManualCursor = true;
+        offsetMinutes = target.focusMin;
+        updateUI();
+      }
+    }
+
+    function syncToLiveBeijingTime() {
+      const bj = getCurrentBeijingOffset();
+      isManualCursor = false;
+      offsetMinutes = bj.offset;
+      document.getElementById('liveClockBadge').textContent = bj.clockStr;
+      updateUI();
+    }
+
+    // 滑块事件
+    timeSlider.addEventListener('input', (e) => {
+      isManualCursor = true;
+      offsetMinutes = Number(e.target.value);
+      updateUI();
+    });
+
+    // 同步当前北京时间按钮
+    document.getElementById('btnSyncNow').addEventListener('click', syncToLiveBeijingTime);
+
+    // Canvas 鼠标移动（检测锚点悬停 + 显示 Tooltip）
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let found = null;
+      for (let i = renderedAnchors.length - 1; i >= 0; i--) {
+        const a = renderedAnchors[i];
+        if (mx >= a.hitX && mx <= a.hitX + a.hitW && my >= a.hitY && my <= a.hitY + a.hitH) {
+          found = a;
+          break;
+        }
+      }
+
+      if (found) {
+        hoveredEvent = found;
+        canvas.style.cursor = 'pointer';
+        document.getElementById('tooltipTime').textContent = `${found.timeStr} (UTC+8)`;
+        document.getElementById('tooltipTime').style.color = found.color;
+        document.getElementById('tooltipTag').textContent = found.tag;
+        document.getElementById('tooltipTitle').textContent = found.label;
+        document.getElementById('tooltipDesc').textContent = found.desc;
+
+        tooltip.classList.remove('hidden');
+        let tx = found.screenX + 12;
+        let ty = Math.max(10, found.screenY - 10);
+        if (tx + 280 > rect.width) tx = found.screenX - 285;
+        tooltip.style.left = `${tx}px`;
+        tooltip.style.top = `${ty}px`;
+      } else {
+        hoveredEvent = null;
+        canvas.style.cursor = 'crosshair';
+        tooltip.classList.add('hidden');
+      }
+      drawChart();
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      hoveredEvent = null;
+      tooltip.classList.add('hidden');
+      drawChart();
+    });
+
+    // Canvas 点击（如果点中锚点则精准跳到锚点时间，否则按横坐标跳转到对应分钟）
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const padLeft = rect.width < 640 ? 38 : 52;
+      const padRight = rect.width < 640 ? 18 : 32;
+      const plotW = rect.width - padLeft - padRight;
+
+      isManualCursor = true;
+      if (hoveredEvent) {
+        offsetMinutes = hoveredEvent.min;
+      } else {
+        const ratio = Math.max(0, Math.min(1, (mx - padLeft) / plotW));
+        offsetMinutes = Math.round((ratio * 1440) / 5) * 5;
+      }
+      updateUI();
+    });
+
+    // 窗口缩放自适应重绘
+    window.addEventListener('resize', drawChart);
+
+    // 定时刷新顶部实时时钟（若处于实时模式则同步移动游标）
+    setInterval(() => {
+      const bj = getCurrentBeijingOffset();
+      document.getElementById('liveClockBadge').textContent = bj.clockStr;
+      if (!isManualCursor) {
+        offsetMinutes = bj.offset;
+        updateUI();
+      }
+    }, 15000);
+
+    // 初始化启动
+    window.onload = function () {
+      renderPeakCards();
+      syncToLiveBeijingTime();
+    };
+  </script>
+</body>
+</html>

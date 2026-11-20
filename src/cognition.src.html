@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>交易员认知与能力推演终端 (Trader Cognition & Monte Carlo Terminal)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-obsidian: #080b10;
+      --bg-panel: #0e131d;
+      --bg-card: #131926;
+      --border-subtle: #1e293b;
+      --amber: #f59e0b;
+      --emerald: #10b981;
+      --cyan: #38bdf8;
+      --crimson: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-obsidian);
+      color: #e2e8f0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 量化滑块样式 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1e293b;
+      height: 5px;
+      border-radius: 999px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #f59e0b;
+      cursor: pointer;
+      border: 2px solid #080b10;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .card-glow-amber {
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.08);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col gap-3.5 p-3 sm:p-5">
+
+  <!-- 顶部终端导航头 -->
+  <header class="bg-[#0e131d] border border-[#1e293b] rounded-xl px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+    <div class="flex items-start sm:items-center gap-3 min-w-0">
+      <a href="index.html" title="返回门户" style="display:inline-flex;align-items:center;gap:5px;flex-shrink:0;padding:7px 11px;border-radius:9px;background:#131926;border:1px solid #28354b;color:#cbd5e1;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;transition:all .15s" onmouseover="this.style.borderColor='#38bdf8';this.style.color='#38bdf8'" onmouseout="this.style.borderColor='#28354b';this.style.color='#cbd5e1'">&larr; <span style="font-family:'JetBrains Mono',monospace">PORTAL [00]</span></a>
+      <div class="w-2.5 h-9 rounded-full bg-gradient-to-b from-[#f59e0b] via-[#38bdf8] to-[#10b981] shadow-[0_0_14px_rgba(245,158,11,0.45)] shrink-0 mt-0.5 sm:mt-0"></div>
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-100">
+            交易员认知与能力推演终端
+          </h1>
+          <span class="text-[12px] font-mono-num px-2 py-0.5 rounded bg-[#131926] text-[#f59e0b] border border-[#f59e0b]/35">
+            COGNITIVE ARCHITECTURE & MONTE CARLO LAB
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5 leading-relaxed break-words">
+          将原始九步链路重构为六大核心认知支柱 · 拆解行为心理学根源 · 蒙特卡洛概率方差验证
+        </p>
+      </div>
+    </div>
+
+    <!-- 快捷认知闭环提示 -->
+    <div class="flex flex-wrap items-center gap-2 text-[12px]">
+      <div class="px-2.5 py-1.5 rounded-lg bg-[#131926] border border-[#1e293b] text-slate-300 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#f59e0b]"></span>
+        <span>单笔交易 = 随机样本</span>
+      </div>
+      <span class="text-slate-600">&rarr;</span>
+      <div class="px-2.5 py-1.5 rounded-lg bg-[#131926] border border-[#1e293b] text-slate-300 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-[#38bdf8]"></span>
+        <span>100+ 笔序列 = 数学期望兑现</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 上半部分：左上角【能力维度雷达图】 + 右侧【深度认知与心理学推演面板】 -->
+  <section class="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
+
+    <!-- 左上角模块 (5列)：六维能力结构雷达图 + 支柱切换器 -->
+    <div class="xl:col-span-5 bg-[#0e131d] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b border-[#1e293b] pb-2.5">
+        <div>
+          <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <span>交易员六维能力结构图</span>
+            <span class="text-[11px] font-mono-num text-[#38bdf8] bg-[#38bdf8]/10 border border-[#38bdf8]/30 px-1.5 py-0.5 rounded">
+              点击顶点切换推演
+            </span>
+          </h2>
+          <p class="text-[12px] text-slate-400 mt-0.5">由“情绪-感知-结构-持仓-风控-复盘”重构的认知闭环</p>
+        </div>
+        <div class="text-right hidden sm:block">
+          <div class="text-[11px] text-slate-400">当前短板预警</div>
+          <div id="bottleneckLabel" class="text-xs font-bold text-[#ef4444]">情绪与心智防御 (5/10)</div>
+        </div>
+      </div>
+
+      <!-- 雷达图 Canvas 容器 -->
+      <div class="relative w-full flex-1 min-h-[285px] sm:min-h-[320px]">
+        <canvas id="radarCanvas"></canvas>
+      </div>
+
+      <!-- 六大支柱快捷胶囊选择器 -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5" id="pillarPills">
+        <!-- JS 动态生成 -->
+      </div>
+
+      <!-- 当前选中维度的自评滑块 -->
+      <div class="bg-[#131926] border border-[#1e293b] rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+        <div class="text-xs text-slate-300 shrink-0">
+          <span id="scoreSliderTitle" class="font-semibold text-[#f59e0b]">情绪与心智防御</span> 自评评分：
+        </div>
+        <input id="scoreSlider" type="range" min="1" max="10" step="1" value="5" class="w-full" />
+        <span id="scoreSliderVal" class="font-mono-num text-xs font-bold text-[#38bdf8] shrink-0">5 / 10</span>
+      </div>
+    </div>
+
+    <!-- 右侧模块 (7列)：当前选中能力的【知识点推演 · 高频错误 · 心理学根源 · 纠偏协议】 -->
+    <div class="xl:col-span-7 bg-[#0e131d] border border-[#1e293b] rounded-xl p-4 flex flex-col justify-between gap-3 card-glow-amber">
+      <!-- 卡片顶部标题与重构映射 -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1e293b] pb-3">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="detailBadge" class="text-[12px] font-mono-num font-semibold px-2 py-0.5 rounded bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/40">
+              PILLAR 01 · PSYCHOLOGY
+            </span>
+            <span id="detailMapping" class="text-[12px] text-slate-400">
+              重构原图节点：【情绪管理 Psychology】统御全链路
+            </span>
+          </div>
+          <h2 id="detailTitle" class="text-lg sm:text-xl font-bold text-slate-100 mt-1 break-words">
+            情绪与心智防御 (Emotional Defense & Tilt Control)
+          </h2>
+        </div>
+
+        <button id="btnNextPillar" class="self-start sm:self-center px-3 py-1.5 rounded-lg text-xs font-medium bg-[#131926] text-slate-200 border border-[#28354b] hover:border-[#f59e0b]/60 hover:text-[#f59e0b] transition-all shrink-0">
+          推演下一能力维度 &rarr;
+        </button>
+      </div>
+
+      <!-- 第一性原理核心定义 -->
+      <div class="bg-[#131926] border border-[#38bdf8]/30 rounded-xl p-3">
+        <div class="text-[12px] font-bold text-[#38bdf8] uppercase tracking-wider flex items-center gap-1.5">
+          <span>◈ 核心认知第一性原理 (First-Principles Core)</span>
+        </div>
+        <p id="detailPrinciple" class="text-xs sm:text-[13px] text-slate-200 leading-relaxed mt-1.5">
+          市场本质上是一个概率分布机器，单笔交易的盈亏在统计学上具有高度随机性。情绪管理不是“强迫自己没有情绪”，而是建立一套隔离机制，防止大脑杏仁核在连续止损或踏空时劫持前额叶皮层，破坏既定的正期望执行动作。
+        </p>
+      </div>
+
+      <!-- 双栏对比：日常高频错误 vs 背后的行为心理学根源 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1">
+        <!-- 日常高频错误 -->
+        <div class="bg-[#131926] border border-[#ef4444]/35 rounded-xl p-3 flex flex-col">
+          <div class="text-xs font-bold text-[#f87171] flex items-center gap-1.5 mb-2">
+            <span>✕ 交易员日常高频致命错误</span>
+          </div>
+          <ul id="detailMistakes" class="space-y-2 text-xs text-slate-300 leading-relaxed flex-1">
+            <!-- JS 动态填充 -->
+          </ul>
+        </div>
+
+        <!-- 背后的心理学原因 -->
+        <div class="bg-[#131926] border border-[#f59e0b]/35 rounded-xl p-3 flex flex-col">
+          <div class="text-xs font-bold text-[#fbbf24] flex items-center gap-1.5 mb-2">
+            <span>🧠 背后的行为心理学与神经机制</span>
+          </div>
+          <ul id="detailPsych" class="space-y-2 text-xs text-slate-300 leading-relaxed flex-1">
+            <!-- JS 动态填充 -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- 实战纠偏协议 (Actionable Protocol) -->
+      <div class="bg-gradient-to-r from-[#10b981]/15 via-[#131926] to-[#131926] border border-[#10b981]/40 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <div class="text-[12px] font-bold text-[#34d399]">✓ 系统纠偏与执行协议 (Counter-Bias Protocol)</div>
+          <p id="detailProtocol" class="text-xs text-slate-200 mt-0.5 leading-relaxed">
+            触发单日最大止损上限（如 -3R）或连续 2 笔情绪化偏离计划交易后，强制物理锁仓 30 分钟；在下单前必须大声核对“止损锚点是否在关键结构外侧”。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 下半部分（核心必选模块）：蒙特卡洛概率与资金曲线方差推演引擎 -->
+  <section class="bg-[#0e131d] border border-[#1e293b] rounded-xl p-4 flex flex-col gap-3.5">
+    <!-- 模块头部与快捷策略对比预设 -->
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-[#1e293b] pb-3">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="text-base font-bold text-slate-100">
+            蒙特卡洛概率推演引擎 (Monte Carlo Equity & Variance Simulator)
+          </h2>
+          <span class="text-[11px] font-mono-num px-2 py-0.5 rounded bg-[#10b981]/15 text-[#34d399] border border-[#10b981]/35">
+            100 条平行宇宙资金曲线实时推演
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">
+          打破“用最近两笔输赢评价策略”的近因偏差：观察相同胜率与盈亏比下，不同平行路径的连亏分布与长期复利分化
+        </p>
+      </div>
+
+      <!-- 策略对比预设按钮组 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="mcPresetCompact2B" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-[#10b981]/20 text-[#34d399] border border-[#10b981]/50 hover:bg-[#10b981]/30">
+          🎯 紧凑小 2B 狙击（38%胜率 · 3.8R）
+        </button>
+        <button id="mcPresetWide2B" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-[#131926] text-slate-300 border border-[#28354b] hover:border-[#f59e0b]/50 hover:text-[#fbbf24]">
+          ⚠️ 宽幅大 2B 妥协（38%胜率 · 1.8R）
+        </button>
+        <button id="mcPresetTilt" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-[#131926] text-slate-300 border border-[#28354b] hover:border-[#ef4444]/50 hover:text-[#f87171]">
+          🔥 情绪失控报复交易（含 -3R 失控重锤）
+        </button>
+        <button id="btnRerunMC" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#f59e0b] text-[#080b10] hover:bg-[#fbbf24] transition-all shadow-[0_0_12px_rgba(245,158,11,0.35)] active:scale-95">
+          🎲 重新随机推演 100 条路径
+        </button>
+      </div>
+    </div>
+
+    <!-- 蒙特卡洛核心统计指标 HUD -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">单笔数学期望值 (E)</div>
+        <div id="mcExpectancy" class="text-base sm:text-lg font-bold font-mono-num text-[#10b981] mt-0.5">+0.82R</div>
+        <div id="mcExpectancyHint" class="text-[11px] text-slate-400 mt-0.5">每扣 1R 风险平均净赚</div>
+      </div>
+
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">中位数终值净值 (P50)</div>
+        <div id="mcMedianEquity" class="text-base sm:text-lg font-bold font-mono-num text-[#38bdf8] mt-0.5">$44,210</div>
+        <div id="mcMedianReturn" class="text-[11px] font-mono-num text-[#34d399] mt-0.5">+342.1% (起始 $10,000)</div>
+      </div>
+
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">乐观路径终值 (P90)</div>
+        <div id="mcP90Equity" class="text-base sm:text-lg font-bold font-mono-num text-[#10b981] mt-0.5">$89,500</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">顺风连胜方差红利</div>
+      </div>
+
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">悲观路径终值 (P10)</div>
+        <div id="mcP10Equity" class="text-base sm:text-lg font-bold font-mono-num text-[#f59e0b] mt-0.5">$19,400</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">逆风分布下仍守住正收益</div>
+      </div>
+
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">全样本平均最大连亏</div>
+        <div id="mcMaxStreak" class="text-base sm:text-lg font-bold font-mono-num text-[#ef4444] mt-0.5">9.4 笔</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">心理耐受度必修基准</div>
+      </div>
+
+      <div class="bg-[#131926] border border-[#1e293b] rounded-xl p-2.5">
+        <div class="text-[12px] text-slate-400">最终盈利概率 / 深回撤</div>
+        <div class="flex items-baseline gap-1.5 mt-0.5">
+          <span id="mcProfitProb" class="text-base sm:text-lg font-bold font-mono-num text-[#10b981]">98%</span>
+          <span id="mcRuinProb" class="text-xs font-mono-num text-slate-400">/ 破产 0%</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-0.5">100 条模拟路径统计</div>
+      </div>
+    </div>
+
+    <!-- 主体布局：左侧参数调控台 (4列) + 右侧蒙特卡洛曲线画布 (8列) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+      <!-- 参数滑块控制台 -->
+      <div class="lg:col-span-4 bg-[#131926] border border-[#1e293b] rounded-xl p-3.5 flex flex-col justify-between gap-3">
+        <div class="space-y-3">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">策略真实胜率 (Win Rate)</span>
+              <span id="valMcWinRate" class="font-mono-num font-bold text-[#38bdf8]">38%</span>
+            </div>
+            <input id="sliderMcWinRate" type="range" min="20" max="65" step="1" value="38" class="w-full" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">平均盈亏比 (Reward / Risk)</span>
+              <span id="valMcRR" class="font-mono-num font-bold text-[#10b981]">3.8R</span>
+            </div>
+            <input id="sliderMcRR" type="range" min="1.2" max="6.0" step="0.1" value="3.8" class="w-full" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">单笔固定风险仓位 (Risk / Trade)</span>
+              <span id="valMcRisk" class="font-mono-num font-bold text-[#f59e0b]">1.0%</span>
+            </div>
+            <input id="sliderMcRisk" type="range" min="0.5" max="3.0" step="0.25" value="1.0" class="w-full" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-300 font-medium">推演样本笔数 (Sample Trades)</span>
+              <span id="valMcTrades" class="font-mono-num font-bold text-slate-200">200 笔</span>
+            </div>
+            <input id="sliderMcTrades" type="range" min="50" max="500" step="25" value="200" class="w-full" />
+          </div>
+
+          <div class="pt-1 border-t border-[#1e293b]">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-[#f87171] font-medium">情绪失控/报复交易率 (Tilt -3R)</span>
+              <span id="valMcTilt" class="font-mono-num font-bold text-[#ef4444]">0%</span>
+            </div>
+            <input id="sliderMcTilt" type="range" min="0" max="15" step="1" value="0" class="w-full" />
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">
+              模拟情绪崩溃时“抗单/重仓一把亏掉 -3R”的频率，观察一两次失控如何吞噬整个正期望系统。
+            </p>
+          </div>
+        </div>
+
+        <!-- 认知洞察总结框 -->
+        <div id="mcInsightBox" class="bg-[#0e131d] border border-[#10b981]/35 rounded-lg p-2.5 text-[12px] text-slate-300 leading-relaxed">
+          <strong class="text-[#34d399]">认知结论：</strong>即使拥有 +0.82R 的极强优势，200 笔交易中依然有极大概率遭遇 <span class="text-[#f87171] font-mono-num">8~11 笔</span> 连续止损。能熬过这段纯数学方差的交易员，才能拿到 P50~P90 的复利曲线。
+        </div>
+      </div>
+
+      <!-- 右侧蒙特卡洛曲线画布 -->
+      <div class="lg:col-span-8 bg-[#090d14] border border-[#1e293b] rounded-xl flex flex-col overflow-hidden min-h-[330px]">
+        <div class="px-3.5 py-2 border-b border-[#1e293b] bg-[#131926]/80 flex flex-wrap items-center justify-between gap-2 text-[12px]">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5 text-slate-200">
+              <span class="w-3 h-0.5 bg-[#10b981] inline-block"></span>乐观路径 (P90)
+            </span>
+            <span class="flex items-center gap-1.5 text-slate-200 font-semibold">
+              <span class="w-3 h-0.5 bg-[#38bdf8] inline-block"></span>中位数基准路径 (P50)
+            </span>
+            <span class="flex items-center gap-1.5 text-slate-200">
+              <span class="w-3 h-0.5 bg-[#f59e0b] inline-block"></span>逆风路径 (P10)
+            </span>
+            <span class="flex items-center gap-1.5 text-slate-400">
+              <span class="w-3 h-0.5 bg-slate-500/40 inline-block"></span>其余 97 条随机路径
+            </span>
+          </div>
+          <span class="font-mono-num text-[11px] text-slate-400">起始本金: $10,000 (复利净值曲线)</span>
+        </div>
+
+        <div class="relative flex-1 w-full h-full min-h-[290px]">
+          <canvas id="mcCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /**
+     * 交易员六维认知架构数据与交互推演引擎
+     * 将原图【情绪管理】+【市场->机会->结构->入场->持仓->退出】+【复盘->能力迭代】
+     * 重构为 6 个高度凝练、直指日常实战与行为心理学的核心能力支柱。
+     */
+    const PILLARS = [
+      {
+        id: 0,
+        shortName: '情绪防御',
+        code: 'PILLAR 01 · PSYCHOLOGY',
+        mapping: '重构原图：【情绪管理 Psychology】全链路中枢',
+        title: '情绪与心智防御 (Emotional Defense & Tilt Control)',
+        score: 5,
+        principle:
+          '市场本质上是概率分布机器，单笔交易的盈亏在统计学上高度随机。情绪管理不是“压抑情绪”，而是建立一套物理与规则隔离机制，防止大脑边缘系统（杏仁核）在连续止损或踏空时劫持前额叶理智，破坏既定的正期望执行动作。',
+        mistakes: [
+          '连续止损 2–3 笔后产生“翻本执念”，在无结构位置重仓报复交易（Revenge Trading）。',
+          '因为前几笔刚止损，面对完全符合标准的紧凑 2B 信号时犹豫踏空，随后又在情绪焦躁中追高。',
+          '大赚一笔后陷入全能自恋（Euphoria），无视仓位上限加倍下注并迅速回吐利润。'
+        ],
+        psychology: [
+          '损失厌恶（Loss Aversion）：人类对亏损的痛苦感是等额盈利快感的 2–2.5 倍，驱动大脑急于通过“立刻赢回来”消除痛苦。',
+          '多巴胺奖赏预测误差（RPE）：高波动与随机盈利会触发类似成瘾的神经回路，使交易员把“下注刺激”误当成“交易优势”。',
+          '控制幻觉（Illusion of Control）：人类本能抗拒随机性，总想通过强行干预单笔结果来证明自己“能掌控市场”。'
+        ],
+        protocol:
+          '设定硬性“日内熔断阈值”（如单日累计亏损达 -3R 或连续 2 笔偏离计划交易），触发后强制离开屏幕 30 分钟；用蒙特卡洛模拟提醒自己：10 连亏在 38% 胜率下完全正常。'
+      },
+      {
+        id: 1,
+        shortName: '市场识别',
+        code: 'PILLAR 02 · MARKET & OPPORTUNITY',
+        mapping: '重构原图：【市场 Market → 机会 Opportunity】',
+        title: '市场状态与流动性识别 (Market Regime & Opportunity)',
+        score: 7,
+        principle:
+          '你的高盈亏比优势并非全天候存在，它高度依赖“催化剂 + 关键流动性失衡”。交易员的第一职责不是每分钟都在找单子，而是过滤掉低波均衡的垃圾时间，只在存在明确订单流不对称的标的与时段扣动扳机。',
+        mistakes: [
+          '在无消息、无成交量的午盘横盘区强行寻找 2B 结构，把普通随机毛刺当成流动性猎杀。',
+          '用固定的百分比（如死卡 1.5%）衡量所有股票，忽视不同标的当日 ATR 与相对波动率的巨大差异。',
+          '明知大盘或板块处于逆风压制，仍孤立做多弱势股的虚假突破。'
+        ],
+        psychology: [
+          '行动偏差（Action Bias）：职业交易员常把“盯着屏幕却不下单”等同于“偷懒/无能”，为了缓解无聊感而强行制造交易。',
+          '确认偏误（Confirmation Bias）：一旦内心想做多，就会选择性放大看多信号，自动过滤上方密集阻力与成交量萎缩的警告。'
+        ],
+        protocol:
+          '执行“开盘前机会白名单制度”：只交易具备强催化剂、盘前成交量异常放大且关键水平位（PMH/PML/昨日高低）清晰可见的标的；其余时间空仓等待。'
+      },
+      {
+        id: 2,
+        shortName: '结构精度',
+        code: 'PILLAR 03 · STRUCTURE & ENTRY',
+        mapping: '重构原图：【结构 Structure → 入场 Entry】',
+        title: '结构压缩与入场精度 (Structure Compression & Precision)',
+        score: 8,
+        principle:
+          '低频狙击策略的数学核心在于“用极小的空间止损撬动大延伸”。只有在关键位完成刺破收回、且回测不破形成极窄压缩（HL 抬高、波动率收敛）的紧凑 2B，才能提供 3.5R 以上的非对称赔率；宽幅大 2B 会把赔率压缩至 2R 以下的负期望泥潭。',
+        mistakes: [
+          '在宽幅拉锯、止损极宽的“大 2B 结构”中勉强入场，导致目标位只能勉强看到 1.8R–2R。',
+          '不等价格收回关键位及回测压缩确认，在向下刺破的第一根阴线就盲目“接飞刀”抄底。',
+          '错过紧凑起爆点后，在突破颈线远离止损锚点 1.5R 之后情绪化追单。'
+        ],
+        psychology: [
+          '错失恐惧症（FOMO）：看到价格开始拉升时，大脑将“错过这波行情”脑补成“实实在在的金钱损失”，迫使你在赔率最差的位置追进。',
+          '锚定效应（Anchoring）：死盯 1.5% 等固定数字，或锚定刚才错过的低价，无法根据当前盘口压缩紧度动态评估风险回报比。'
+        ],
+        protocol:
+          '引入“赔率一票否决制”：下单前先量取止损锚点到第一强阻力的空间，若自然盈亏比低于 3.0R，无论图形多诱人，一律视为无效信号直接放弃。'
+      },
+      {
+        id: 3,
+        shortName: '赔率持仓',
+        code: 'PILLAR 04 · POSITION MANAGEMENT',
+        mapping: '重构原图：【持仓 Position】非对称收益放大器',
+        title: '持仓与非对称赔率管理 (Asymmetric R-Management)',
+        score: 6,
+        principle:
+          '在 35%–42% 胜率的低频狙击系统中，全年的净利润几乎全部来自少数几笔 4R–8R 的大赢家。如果你在 +1.2R 时因为害怕利润回吐而提前全平，整个系统的数学期望瞬间崩塌为负数。',
+        mistakes: [
+          '刚浮盈 +1R~+1.5R 就紧张地全部平仓落袋，导致“亏时亏满 1R，赚时只拿 1.3R”。',
+          '价格刚突破颈线进入上涨螺旋，过早把保护性止损推到入场价（保本损），被正常回踩洗出后眼睁睁看着行情冲向 +5R。',
+          '分批止盈毫无章法，在第一波脉冲就把 80% 仓位卖光，导致后面即便走成大趋势也赚不到大钱。'
+        ],
+        psychology: [
+          '确定性效应（Certainty Effect）：面对“确定的 +1.2R 小利”与“有概率回撤但可能变成 +5R 的大利”，人类本能倾向于落袋为安以消除不确定性焦虑。',
+          '后悔厌恶（Regret Aversion）：交易员极度害怕“浮盈变浮亏”带来的自我责备，宁愿少赚也不愿承受正常回调。'
+        ],
+        protocol:
+          '执行“阶梯式结构移动止损”：在 +2R 之前绝不随意推保本损；到达 +2.5R 后可减仓 1/3 锁定成本，剩余 2/3 仓位严格依托 1 分钟/5 分钟Higher Low 结构推损，让上涨螺旋自由奔跑。'
+      },
+      {
+        id: 4,
+        shortName: '风险退出',
+        code: 'PILLAR 05 · EXIT & RISK BOUNDARY',
+        mapping: '重构原图：【退出 Exit】生存底线守护',
+        title: '风险边界与硬止损纪律 (Exit & Hard Risk Boundary)',
+        score: 7,
+        principle:
+          '止损的本质不是“认输”，而是“买一张看牌的门票——当价格证明我的结构假设失效时，立刻收回剩余本金”。只要单笔亏损被严格锁死在 1R 以内，任何单次错误都无法对账户造成结构性伤害。',
+        mistakes: [
+          '价格打到预设止损锚点时，心存侥幸手动撤掉止损单，把原本可控的 -1R 拖成 -3R 甚至 -5R。',
+          '在亏损头寸上逆势摊平加仓（Averaging Down），试图拉低成本快速回本。',
+          '进场前没有明确具体的结构失效点，进场后看情绪和盈亏数字临时决定何时砍仓。'
+        ],
+        psychology: [
+          '沉没成本谬误（Sunk Cost Fallacy）：已经浮亏的钱被大脑视为“沉没成本”，平仓意味着承认决策失败，因此倾向于继续死扛等待奇迹。',
+          '禀赋效应（Endowment Effect）：一旦持有了某个仓位，就会对其产生非理性偏爱，高估它反转回来的概率。'
+        ],
+        protocol:
+          '“进场即挂硬止损单”：必须在入场成交的 3 秒内挂出服务器端的硬止损单（Hard Stop），禁止使用“心理止损”；严禁向任何浮亏仓位加仓。'
+      },
+      {
+        id: 5,
+        shortName: '复盘迭代',
+        code: 'PILLAR 06 · REVIEW & ADAPTATION',
+        mapping: '重构原图：【复盘 Review → 能力迭代 Adaptation】',
+        title: '复盘归因与系统迭代 (Review & Edge Adaptation)',
+        score: 6,
+        principle:
+          '交易进步的唯一路径是将“过程质量（Process）”与“短期结果（Outcome）”彻底解耦。赚钱的违纪交易是毒药，亏钱的标准交易是高质量样本；复盘的核心是从 50–100 笔样本中提炼统计规律，而非被单日情绪左右。',
+        mistakes: [
+          '用当天的盈亏金额衡量自己做得好不好：赚了钱就不复盘，亏了钱就把所有交易全盘否定。',
+          '每遇到连续几天回撤，就频繁修改策略参数或推翻原有模式，永远无法积累大样本统计优势。',
+          '复盘只停留在“当时要是拿住就好了”的事后诸葛亮感慨，没有转化为可执行的规则条目。'
+        ],
+        psychology: [
+          '结果偏见（Outcome Bias）：人类习惯根据最终结果的好坏倒推决策是否正确，忽略了概率游戏中的运气成分。',
+          '后视镜偏见（Hindsight Bias）：收盘后看着静态 K 线图，大脑会产生“当时那个突破太明显了”的幻觉，低估盘中实时决策的不确定性。'
+        ],
+        protocol:
+          '建立“执行评分表（Process Score）”：每笔交易独立打分（是否符合紧凑 2B、是否按计划止损、是否拿住目标），只统计连续 30 笔以上“高执行分交易”的胜率与盈亏比，据此微调系统。'
+      }
+    ];
+
+    let activePillarId = 0;
+
+    // ==================== 1. 能力维度雷达图引擎 ====================
+    const radarCanvas = document.getElementById('radarCanvas');
+    const radarCtx = radarCanvas.getContext('2d');
+    let radarVertices = []; // 存储当前六边形顶点坐标用于点击命中检测
+
+    function syncCanvasDPR(canvas, ctx) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+        canvas.width = Math.floor(rect.width * dpr);
+        canvas.height = Math.floor(rect.height * dpr);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { width: rect.width, height: rect.height };
+    }
+
+    function renderRadarChart() {
+      const { width, height } = syncCanvasDPR(radarCanvas, radarCtx);
+      const ctx = radarCtx;
+      ctx.clearRect(0, 0, width, height);
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const maxRadius = Math.min(width, height) * 0.38;
+      const count = PILLARS.length;
+      const angleStep = (Math.PI * 2) / count;
+      const startAngle = -Math.PI / 2; // 顶点朝上：情绪防御
+
+      // 1. 绘制 5 层同心六边形网格
+      for (let level = 1; level <= 5; level++) {
+        const r = (maxRadius * level) / 5;
+        ctx.beginPath();
+        for (let i = 0; i < count; i++) {
+          const ang = startAngle + i * angleStep;
+          const x = cx + Math.cos(ang) * r;
+          const y = cy + Math.sin(ang) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = level === 5 ? 'rgba(56, 189, 248, 0.35)' : 'rgba(30, 41, 59, 0.75)';
+        ctx.lineWidth = level === 5 ? 1.4 : 1;
+        ctx.stroke();
+      }
+
+      // 2. 绘制辐射轴线
+      for (let i = 0; i < count; i++) {
+        const ang = startAngle + i * angleStep;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(ang) * maxRadius, cy + Math.sin(ang) * maxRadius);
+        ctx.strokeStyle = i === activePillarId ? 'rgba(245, 158, 11, 0.65)' : 'rgba(30, 41, 59, 0.7)';
+        ctx.lineWidth = i === activePillarId ? 1.5 : 1;
+        ctx.stroke();
+      }
+
+      // 3. 绘制交易员能力多边形面积
+      ctx.beginPath();
+      PILLARS.forEach((p, i) => {
+        const ang = startAngle + i * angleStep;
+        const r = (p.score / 10) * maxRadius;
+        const x = cx + Math.cos(ang) * r;
+        const y = cy + Math.sin(ang) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      const polyGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, maxRadius);
+      polyGrad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
+      polyGrad.addColorStop(1, 'rgba(245, 158, 11, 0.22)');
+      ctx.fillStyle = polyGrad;
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 4. 绘制六个能力顶点与文字标签
+      radarVertices = [];
+      PILLARS.forEach((p, i) => {
+        const ang = startAngle + i * angleStep;
+        const scoreR = (p.score / 10) * maxRadius;
+        const vx = cx + Math.cos(ang) * scoreR;
+        const vy = cy + Math.sin(ang) * scoreR;
+
+        const outerX = cx + Math.cos(ang) * (maxRadius + 24);
+        const outerY = cy + Math.sin(ang) * (maxRadius + 20);
+        radarVertices.push({ id: p.id, x: outerX, y: outerY, vx, vy });
+
+        const isActive = p.id === activePillarId;
+
+        // 顶点光圈
+        ctx.save();
+        if (isActive) {
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 14;
+        }
+        ctx.fillStyle = isActive ? '#f59e0b' : p.score <= 5 ? '#ef4444' : '#10b981';
+        ctx.beginPath();
+        ctx.arc(vx, vy, isActive ? 6 : 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#080b10';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        // 标签文本：左右标签统一向内对齐（文字朝中心延伸），任何宽度都不会横向溢出
+        const narrow = width < 430;
+        ctx.font = isActive ? 'bold 13px "Inter", sans-serif' : '500 12px "Inter", sans-serif';
+        ctx.fillStyle = isActive ? '#fbbf24' : '#cbd5e1';
+        const cosA = Math.cos(ang);
+        // 右侧标签 right 对齐→向左延伸；左侧标签 left 对齐→向右延伸；上下居中
+        ctx.textAlign = cosA > 0.2 ? 'right' : cosA < -0.2 ? 'left' : 'center';
+        ctx.textBaseline = Math.sin(ang) > 0.4 ? 'top' : Math.sin(ang) < -0.4 ? 'bottom' : 'middle';
+
+        const labelOff = maxRadius + (narrow ? 10 : 18);
+        const labelX = cx + cosA * labelOff;
+        const labelY = cy + Math.sin(ang) * labelOff;
+        ctx.fillText(narrow ? `${p.shortName} ${p.score}` : `${p.shortName} (${p.score})`, labelX, labelY);
+      });
+    }
+
+    // 雷达图画布点击交互
+    radarCanvas.addEventListener('click', (e) => {
+      const rect = radarCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      let closestId = activePillarId;
+      let minDist = 48; // 触摸/点击容差半径
+      radarVertices.forEach(v => {
+        const d1 = Math.hypot(clickX - v.x, clickY - v.y);
+        const d2 = Math.hypot(clickX - v.vx, clickY - v.vy);
+        const d = Math.min(d1, d2);
+        if (d < minDist) {
+          minDist = d;
+          closestId = v.id;
+        }
+      });
+
+      if (closestId !== activePillarId) {
+        selectPillar(closestId);
+      }
+    });
+
+    /**
+     * 切换当前激活的能力支柱并同步 UI
+     */
+    function selectPillar(id) {
+      activePillarId = id;
+      const p = PILLARS[id];
+
+      document.getElementById('detailBadge').textContent = p.code;
+      document.getElementById('detailMapping').textContent = p.mapping;
+      document.getElementById('detailTitle').textContent = p.title;
+      document.getElementById('detailPrinciple').textContent = p.principle;
+      document.getElementById('detailProtocol').textContent = p.protocol;
+
+      const mistakesList = document.getElementById('detailMistakes');
+      mistakesList.innerHTML = p.mistakes
+        .map(m => `<li class="flex items-start gap-2"><span class="text-[#ef4444] mt-0.5">•</span><span>${m}</span></li>`)
+        .join('');
+
+      const psychList = document.getElementById('detailPsych');
+      psychList.innerHTML = p.psychology
+        .map(ps => `<li class="flex items-start gap-2"><span class="text-[#f59e0b] mt-0.5">◆</span><span>${ps}</span></li>`)
+        .join('');
+
+      // 同步自评滑块
+      const slider = document.getElementById('scoreSlider');
+      slider.value = p.score;
+      document.getElementById('scoreSliderTitle').textContent = p.shortName;
+      document.getElementById('scoreSliderVal').textContent = `${p.score} / 10`;
+
+      renderPillarPills();
+      updateBottleneckBadge();
+      renderRadarChart();
+    }
+
+    function renderPillarPills() {
+      const container = document.getElementById('pillarPills');
+      container.innerHTML = PILLARS.map(p => {
+        const active = p.id === activePillarId;
+        return `
+          <button data-pid="${p.id}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between border ${
+            active
+              ? 'bg-[#f59e0b]/20 text-[#fbbf24] border-[#f59e0b]/60 font-semibold'
+              : 'bg-[#131926] text-slate-300 border-[#1e293b] hover:border-slate-500'
+          }">
+            <span>${p.id + 1}. ${p.shortName}</span>
+            <span class="font-mono-num text-[11px] ${p.score <= 5 ? 'text-[#f87171]' : 'text-[#34d399]'}">${p.score}</span>
+          </button>
+        `;
+      }).join('');
+
+      container.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectPillar(parseInt(btn.getAttribute('data-pid'), 10));
+        });
+      });
+    }
+
+    function updateBottleneckBadge() {
+      let lowest = PILLARS[0];
+      PILLARS.forEach(p => {
+        if (p.score < lowest.score) lowest = p;
+      });
+      const el = document.getElementById('bottleneckLabel');
+      el.textContent = `${lowest.shortName} (${lowest.score}/10)`;
+      el.className = lowest.score <= 5 ? 'text-xs font-bold text-[#ef4444]' : 'text-xs font-bold text-[#10b981]';
+    }
+
+    document.getElementById('scoreSlider').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      PILLARS[activePillarId].score = val;
+      document.getElementById('scoreSliderVal').textContent = `${val} / 10`;
+      renderPillarPills();
+      updateBottleneckBadge();
+      renderRadarChart();
+    });
+
+    document.getElementById('btnNextPillar').addEventListener('click', () => {
+      selectPillar((activePillarId + 1) % PILLARS.length);
+    });
+
+    // ==================== 2. 蒙特卡洛概率与资金曲线方差模拟器 ====================
+    const mcCanvas = document.getElementById('mcCanvas');
+    const mcCtx = mcCanvas.getContext('2d');
+
+    const mcState = {
+      winRate: 0.38,
+      rr: 3.8,
+      riskPct: 0.01,
+      trades: 200,
+      tiltRate: 0.0,
+      pathCount: 100,
+      initialCapital: 10000,
+      paths: [],
+      p10Path: [],
+      p50Path: [],
+      p90Path: []
+    };
+
+    function runMonteCarloSimulation() {
+      const { winRate, rr, riskPct, trades, tiltRate, pathCount, initialCapital } = mcState;
+      const paths = [];
+      let totalMaxStreak = 0;
+      let profitablePaths = 0;
+      let ruinPaths = 0;
+
+      for (let p = 0; p < pathCount; p++) {
+        let equity = initialCapital;
+        const curve = [equity];
+        let curStreak = 0;
+        let maxStreak = 0;
+        let ruined = false;
+
+        for (let t = 0; t < trades; t++) {
+          if (equity <= initialCapital * 0.25) {
+            ruined = true;
+            curve.push(equity);
+            continue;
+          }
+
+          const riskAmount = equity * riskPct;
+          // 判断是否触发情绪失控重锤 (-3R)
+          if (tiltRate > 0 && Math.random() < tiltRate) {
+            equity -= riskAmount * 3.0;
+            curStreak++;
+            if (curStreak > maxStreak) maxStreak = curStreak;
+          } else if (Math.random() < winRate) {
+            // 盈利：在平均盈亏比基础上引入真实分布波动 (±25%)
+            const realizedR = rr * (0.75 + Math.random() * 0.50);
+            equity += riskAmount * realizedR;
+            curStreak = 0;
+          } else {
+            // 标准 1R 止损
+            equity -= riskAmount;
+            curStreak++;
+            if (curStreak > maxStreak) maxStreak = curStreak;
+          }
+
+          equity = Math.max(0, equity);
+          curve.push(equity);
+        }
+
+        if (equity > initialCapital) profitablePaths++;
+        if (ruined || equity < initialCapital * 0.5) ruinPaths++;
+        totalMaxStreak += maxStreak;
+        paths.push(curve);
+      }
+
+      // 计算每个交易步长上的 P10 / P50 / P90 分位数曲线
+      const p10Path = [];
+      const p50Path = [];
+      const p90Path = [];
+
+      for (let t = 0; t <= trades; t++) {
+        const slice = paths.map(curve => curve[t]).sort((a, b) => a - b);
+        p10Path.push(slice[Math.floor(pathCount * 0.10)]);
+        p50Path.push(slice[Math.floor(pathCount * 0.50)]);
+        p90Path.push(slice[Math.floor(pathCount * 0.90)]);
+      }
+
+      mcState.paths = paths;
+      mcState.p10Path = p10Path;
+      mcState.p50Path = p50Path;
+      mcState.p90Path = p90Path;
+
+      // 更新统计 HUD
+      const effectiveLossR = (1 - tiltRate) * 1.0 + tiltRate * 3.0;
+      const expectancy = winRate * rr - (1 - winRate) * effectiveLossR;
+      const finalP50 = p50Path[trades];
+      const finalP90 = p90Path[trades];
+      const finalP10 = p10Path[trades];
+      const retPct = ((finalP50 - initialCapital) / initialCapital) * 100;
+      const avgMaxStreak = (totalMaxStreak / pathCount).toFixed(1);
+
+      const expEl = document.getElementById('mcExpectancy');
+      expEl.textContent = `${expectancy >= 0 ? '+' : ''}${expectancy.toFixed(2)}R`;
+      expEl.className = `text-base sm:text-lg font-bold font-mono-num mt-0.5 ${expectancy > 0.15 ? 'text-[#10b981]' : expectancy >= 0 ? 'text-[#f59e0b]' : 'text-[#ef4444]'}`;
+
+      document.getElementById('mcMedianEquity').textContent = `$${Math.round(finalP50).toLocaleString()}`;
+      const medRetEl = document.getElementById('mcMedianReturn');
+      medRetEl.textContent = `${retPct >= 0 ? '+' : ''}${retPct.toFixed(1)}% (起始 $10,000)`;
+      medRetEl.className = `text-[11px] font-mono-num mt-0.5 ${retPct >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'}`;
+
+      document.getElementById('mcP90Equity').textContent = `$${Math.round(finalP90).toLocaleString()}`;
+      document.getElementById('mcP10Equity').textContent = `$${Math.round(finalP10).toLocaleString()}`;
+      document.getElementById('mcMaxStreak').textContent = `${avgMaxStreak} 笔`;
+      document.getElementById('mcProfitProb').textContent = `${profitablePaths}%`;
+      document.getElementById('mcProfitProb').className = `text-base sm:text-lg font-bold font-mono-num ${profitablePaths >= 75 ? 'text-[#10b981]' : profitablePaths >= 50 ? 'text-[#f59e0b]' : 'text-[#ef4444]'}`;
+      document.getElementById('mcRuinProb').textContent = `/ 深亏 ${ruinPaths}%`;
+
+      // 更新动态认知洞察解读
+      const insightBox = document.getElementById('mcInsightBox');
+      if (expectancy <= 0) {
+        insightBox.className = 'bg-[#0e131d] border border-[#ef4444]/45 rounded-lg p-2.5 text-[12px] text-slate-300 leading-relaxed';
+        insightBox.innerHTML = `<strong class="text-[#f87171]">数学警告：</strong>当前单笔期望值为 <span class="font-mono-num text-[#f87171]">${expectancy.toFixed(2)}R</span>（负期望/磨损区）。无论如何努力执行，样本量越大资金越向零归拢——必须收紧 2B 结构抬高盈亏比，或消除情绪化 -3R 失控！`;
+      } else if (tiltRate > 0) {
+        insightBox.className = 'bg-[#0e131d] border border-[#f59e0b]/45 rounded-lg p-2.5 text-[12px] text-slate-300 leading-relaxed';
+        insightBox.innerHTML = `<strong class="text-[#fbbf24]">纪律警示：</strong>即便策略本身有优势，但只要有 <span class="font-mono-num text-[#f87171]">${Math.round(tiltRate * 100)}%</span> 的交易发生情绪化 -3R 失控，中位数复利就会被大幅腰斩，且深回撤风险剧增。`;
+      } else {
+        insightBox.className = 'bg-[#0e131d] border border-[#10b981]/35 rounded-lg p-2.5 text-[12px] text-slate-300 leading-relaxed';
+        insightBox.innerHTML = `<strong class="text-[#34d399]">认知验证：</strong>在 +${expectancy.toFixed(2)}R 优势下，${trades} 笔交易中平均仍会出现 <span class="text-[#f87171] font-mono-num">${avgMaxStreak} 笔</span> 连续止损。接受单笔随机亏损、守住 1R 底线，才能兑现 P50~P90 的复利曲线。`;
+      }
+
+      renderMonteCarloCanvas();
+    }
+
+    function renderMonteCarloCanvas() {
+      const { width, height } = syncCanvasDPR(mcCanvas, mcCtx);
+      const ctx = mcCtx;
+      ctx.clearRect(0, 0, width, height);
+
+      if (!mcState.paths.length) return;
+
+      const padLeft = 64;
+      const padRight = 22;
+      const padTop = 20;
+      const padBottom = 28;
+      const plotW = Math.max(80, width - padLeft - padRight);
+      const plotH = Math.max(80, height - padTop - padBottom);
+
+      // 计算纵轴范围（使用 P95 上限避免极端异常值压缩主视图可读性）
+      let maxVal = mcState.initialCapital * 1.4;
+      let minVal = mcState.initialCapital * 0.5;
+      mcState.p90Path.forEach(v => { if (v * 1.15 > maxVal) maxVal = v * 1.15; });
+      mcState.p10Path.forEach(v => { if (v * 0.85 < minVal) minVal = Math.max(0, v * 0.85); });
+
+      const xToPx = (idx) => padLeft + (idx / mcState.trades) * plotW;
+      const valToPy = (v) => padTop + ((maxVal - Math.min(maxVal, Math.max(minVal, v))) / Math.max(1, maxVal - minVal)) * plotH;
+
+      // 1. 绘制背景水平网格与金额刻度
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'right';
+
+      const ySteps = 5;
+      for (let i = 0; i <= ySteps; i++) {
+        const v = minVal + ((maxVal - minVal) * i) / ySteps;
+        const y = valToPy(v);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(width - padRight, y);
+        ctx.stroke();
+        ctx.fillText('$' + Math.round(v).toLocaleString(), padLeft - 8, y + 3.5);
+      }
+
+      // 横轴笔数刻度
+      ctx.textAlign = 'center';
+      for (let s = 0; s <= 4; s++) {
+        const tIdx = Math.round((mcState.trades * s) / 4);
+        const x = xToPx(tIdx);
+        ctx.fillText(`${tIdx}笔`, x, height - 10);
+      }
+
+      // 2. 绘制起始本金基准线 ($10,000)
+      const yBase = valToPy(mcState.initialCapital);
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, yBase);
+      ctx.lineTo(width - padRight, yBase);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. 绘制 100 条半透明平行宇宙随机路径
+      mcState.paths.forEach((curve, idx) => {
+        const finalEq = curve[curve.length - 1];
+        ctx.beginPath();
+        for (let t = 0; t < curve.length; t++) {
+          const x = xToPx(t);
+          const y = valToPy(curve[t]);
+          if (t === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = finalEq >= mcState.initialCapital
+          ? 'rgba(56, 189, 248, 0.11)'
+          : 'rgba(239, 68, 68, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // 4. 绘制 P10 / P50 / P90 三条核心统计分位曲线
+      const drawHighlightCurve = (arr, color, lineW, label) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        for (let t = 0; t < arr.length; t++) {
+          const x = xToPx(t);
+          const y = valToPy(arr[t]);
+          if (t === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // 末端圆点与标签
+        const lastX = xToPx(arr.length - 1);
+        const lastY = valToPy(arr[arr.length - 1]);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      drawHighlightCurve(mcState.p10Path, '#f59e0b', 2.0, 'P10');
+      drawHighlightCurve(mcState.p90Path, '#10b981', 2.0, 'P90');
+      drawHighlightCurve(mcState.p50Path, '#38bdf8', 2.8, 'P50');
+    }
+
+    // 绑定蒙特卡洛滑块与预设交互
+    const sliderMcWinRate = document.getElementById('sliderMcWinRate');
+    const sliderMcRR = document.getElementById('sliderMcRR');
+    const sliderMcRisk = document.getElementById('sliderMcRisk');
+    const sliderMcTrades = document.getElementById('sliderMcTrades');
+    const sliderMcTilt = document.getElementById('sliderMcTilt');
+
+    function syncMcSlidersFromState() {
+      sliderMcWinRate.value = Math.round(mcState.winRate * 100);
+      sliderMcRR.value = mcState.rr.toFixed(1);
+      sliderMcRisk.value = (mcState.riskPct * 100).toFixed(2);
+      sliderMcTrades.value = mcState.trades;
+      sliderMcTilt.value = Math.round(mcState.tiltRate * 100);
+
+      document.getElementById('valMcWinRate').textContent = `${Math.round(mcState.winRate * 100)}%`;
+      document.getElementById('valMcRR').textContent = `${mcState.rr.toFixed(1)}R`;
+      document.getElementById('valMcRisk').textContent = `${(mcState.riskPct * 100).toFixed(1)}%`;
+      document.getElementById('valMcTrades').textContent = `${mcState.trades} 笔`;
+      document.getElementById('valMcTilt').textContent = `${Math.round(mcState.tiltRate * 100)}%`;
+    }
+
+    [sliderMcWinRate, sliderMcRR, sliderMcRisk, sliderMcTrades, sliderMcTilt].forEach(el => {
+      el.addEventListener('input', () => {
+        mcState.winRate = parseInt(sliderMcWinRate.value, 10) / 100;
+        mcState.rr = parseFloat(sliderMcRR.value);
+        mcState.riskPct = parseFloat(sliderMcRisk.value) / 100;
+        mcState.trades = parseInt(sliderMcTrades.value, 10);
+        mcState.tiltRate = parseInt(sliderMcTilt.value, 10) / 100;
+        syncMcSlidersFromState();
+        runMonteCarloSimulation();
+      });
+    });
+
+    document.getElementById('mcPresetCompact2B').addEventListener('click', () => {
+      mcState.winRate = 0.38;
+      mcState.rr = 3.8;
+      mcState.riskPct = 0.01;
+      mcState.tiltRate = 0.0;
+      syncMcSlidersFromState();
+      runMonteCarloSimulation();
+    });
+
+    document.getElementById('mcPresetWide2B').addEventListener('click', () => {
+      mcState.winRate = 0.38;
+      mcState.rr = 1.8;
+      mcState.riskPct = 0.01;
+      mcState.tiltRate = 0.0;
+      syncMcSlidersFromState();
+      runMonteCarloSimulation();
+    });
+
+    document.getElementById('mcPresetTilt').addEventListener('click', () => {
+      mcState.winRate = 0.38;
+      mcState.rr = 3.5;
+      mcState.riskPct = 0.015;
+      mcState.tiltRate = 0.08;
+      syncMcSlidersFromState();
+      runMonteCarloSimulation();
+    });
+
+    document.getElementById('btnRerunMC').addEventListener('click', () => {
+      runMonteCarloSimulation();
+    });
+
+    window.addEventListener('resize', () => {
+      renderRadarChart();
+      renderMonteCarloCanvas();
+    });
+
+    window.onload = function () {
+      selectPillar(0);
+      syncMcSlidersFromState();
+      runMonteCarloSimulation();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IGO // 01 关键位 2B 反转 · 5M × 5S 市场结构交互终端</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #07090d;
+      --bg-surface: #0c1017;
+      --bg-elevated: #111722;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(255, 255, 255, 0.22);
+      --text-primary: #edf2f7;
+      --text-secondary: #8b9bb4;
+      --text-muted: #526075;
+      --accent-green: #00e676;
+      --accent-cyan: #00e5ff;
+      --accent-purple: #a78bfa;
+      --accent-amber: #fbbf24;
+      --accent-rose: #ff5252;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 自定义滑块：对齐主页荧光绿/青色风格 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 15px;
+      width: 15px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      border: 2px solid var(--bg-base);
+      margin-top: -5.5px;
+      box-shadow: 0 0 10px rgba(0, 230, 118, 0.65);
+    }
+
+    /* 磨砂终端浮窗 */
+    .glass-panel {
+      background: rgba(12, 16, 23, 0.94);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.85);
+    }
+
+    /* 返回主页按钮 */
+    .back-portal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .back-portal-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--accent-green);
+      background: rgba(0, 230, 118, 0.08);
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-[#07090d] text-[#edf2f7]">
+
+  <!-- 顶部专业交易终端控制栏（与主页门户视觉对齐） -->
+  <header class="shrink-0 h-[58px] border-b border-white/[0.08] bg-[#07090d]/90 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar z-20">
+    <div class="flex items-center gap-3 shrink-0">
+      <a href="index.html" onclick="return goBackPortal(event)" class="back-portal-btn">&larr; PORTAL [00]</a>
+      <div class="flex items-center gap-2.5 bg-[#0c1017] border border-white/[0.08] px-3 py-1.5 rounded-md">
+        <span class="w-2 h-2 rounded-full bg-[#00e676] shadow-[0_0_10px_#00e676] animate-pulse"></span>
+        <span class="font-mono-num font-semibold text-white text-xs sm:text-[13px] tracking-wider">IGO // <span class="text-[#00e676]">01 策略可视化</span></span>
+        <span class="text-white/15">|</span>
+        <button onclick="togglePopover('popover-library')" title="打开策略库" class="px-2 py-0.5 rounded text-[11px] font-bold bg-[#00e5ff]/15 hover:bg-[#00e5ff]/25 text-[#00e5ff] border border-[#00e5ff]/35 whitespace-nowrap flex items-center gap-1">关键位 2B 反转 <span class="text-[9px] opacity-70">&#9662;</span></button>
+        <span class="text-white/15">|</span>
+        <span class="font-mono-num text-[11px] font-medium text-[#8b9bb4]">5M × 5S</span>
+      </div>
+      <div id="live-price-badge" class="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#0c1017] border border-white/[0.08] font-mono-num text-xs">
+        <span class="text-[#526075]">LAST</span>
+        <span id="hud-price" class="font-bold text-[#00e676]">189.20</span>
+        <span id="hud-time" class="text-[#8b9bb4] border-l border-white/10 pl-2">15:55</span>
+      </div>
+    </div>
+
+    <!-- 入场与出场剧本控制组 -->
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="flex items-center bg-[#0c1017] p-1 rounded-md border border-white/[0.08] gap-1">
+        <span class="font-mono-num text-[11px] text-[#526075] font-semibold px-1.5">ENTRY</span>
+        <button id="btn-entry-1" onclick="setEntry('1')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-[#00e676]/15 text-[#00e676] border border-[#00e676]/45">
+          ① 突破PMH回踩2B
+        </button>
+        <button id="btn-entry-2" onclick="setEntry('2')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white">
+          ② 猎杀PML站上PMH
+        </button>
+      </div>
+
+      <div id="exit-btn-group" class="flex items-center bg-[#0c1017] p-1 rounded-md border border-white/[0.08] gap-1">
+        <span class="font-mono-num text-[11px] text-[#526075] font-semibold px-1.5">EXIT</span>
+        <button id="btn-exit-PMH_INV" onclick="setExit('PMH_INV')" class="hidden px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white">
+          PMH倒锤线止盈
+        </button>
+        <button id="btn-exit-A" onclick="setExit('A')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all bg-amber-400/15 text-amber-300 border border-amber-400/45">
+          分支1 · 二峰止盈
+        </button>
+        <button id="btn-exit-B" onclick="setExit('B')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white">
+          分支2 · 破VWAP
+        </button>
+        <button id="btn-exit-C" onclick="setExit('C')" class="px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white">
+          分支3 · 周K止盈
+        </button>
+      </div>
+    </div>
+
+    <!-- 右侧工具按钮 -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <button onclick="togglePopover('popover-library')" class="px-2.5 py-1.5 rounded-md bg-[#00e5ff]/10 hover:bg-[#00e5ff]/20 border border-[#00e5ff]/35 font-mono-num text-xs font-semibold text-[#00e5ff] flex items-center gap-1.5 transition-colors">
+        <span class="text-sm leading-none">&#9638;</span><span>策略库</span>
+      </button>
+      <button onclick="togglePopover('popover-layers')" class="px-2.5 py-1.5 rounded-md bg-[#111722] hover:border-[#00e5ff]/50 border border-white/[0.08] font-mono-num text-xs font-medium text-[#edf2f7] flex items-center gap-1.5 transition-colors">
+        <span>图层与共振</span>
+        <svg class="w-3.5 h-3.5 text-[#8b9bb4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <button onclick="togglePopover('popover-levels')" class="px-2.5 py-1.5 rounded-md bg-[#111722] hover:border-[#00e5ff]/50 border border-white/[0.08] font-mono-num text-xs font-medium text-[#edf2f7] transition-colors">
+        关键位
+      </button>
+    </div>
+  </header>
+
+  <!-- 悬浮图层控制面板 -->
+  <div id="popover-layers" class="hidden fixed top-16 right-4 z-40 w-80 glass-panel rounded-xl p-4 text-sm">
+    <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-white/[0.08]">
+      <span class="font-mono-num text-xs font-bold tracking-wider text-[#00e5ff]">// OVERLAYS &amp; RESONANCE</span>
+      <button onclick="togglePopover('popover-layers')" class="text-[#8b9bb4] hover:text-white text-sm">✕</button>
+    </div>
+    <div class="space-y-2.5 text-xs">
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-amber-300 font-semibold">✦ 时空量能正交共振交叉</span>
+        <input type="checkbox" checked onchange="toggleExtra('resonance', this.checked)" class="accent-[#00e676] w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-[#00e5ff] font-semibold">🔍 5S 子弹时间微结构窗口</span>
+        <input type="checkbox" checked onchange="toggleExtra('micro5s', this.checked)" class="accent-[#00e5ff] w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-[#a78bfa] font-medium">🌅 盘前催化剂定界 (04:00–09:30)</span>
+        <input type="checkbox" checked onchange="toggleExtra('premarket', this.checked)" class="accent-[#a78bfa] w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-amber-200/90 font-medium">⏱ 黄金狩猎时区 (09:30–10:30)</span>
+        <input type="checkbox" checked onchange="toggleExtra('goldenZone', this.checked)" class="accent-amber-400 w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-[#edf2f7]">日内成交量 U 型基准曲线</span>
+        <input type="checkbox" checked onchange="toggleExtra('uCurve', this.checked)" class="accent-amber-400 w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-amber-400">VWAP 日内均价线</span>
+        <input type="checkbox" checked onchange="toggleLayer('VWAP', this.checked)" class="accent-amber-400 w-4 h-4">
+      </label>
+      <label class="flex items-center justify-between cursor-pointer">
+        <span class="text-[#00e676]">R:R 盈亏比测量盒</span>
+        <input type="checkbox" onchange="toggleExtra('rrBox', this.checked)" class="accent-[#00e676] w-4 h-4">
+      </label>
+    </div>
+  </div>
+
+  <!-- 悬浮关键位置说明面板 -->
+  <div id="popover-levels" class="hidden fixed top-16 right-4 z-40 w-80 glass-panel rounded-xl p-4 text-sm">
+    <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-white/[0.08]">
+      <span class="font-mono-num text-xs font-bold tracking-wider text-[#00e676]">// KEY LIQUIDITY LEVELS</span>
+      <button onclick="togglePopover('popover-levels')" class="text-[#8b9bb4] hover:text-white text-sm">✕</button>
+    </div>
+    <div class="space-y-2.5 text-xs text-[#8b9bb4] leading-relaxed">
+      <div class="p-2.5 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-200">
+        <strong>底层第一性原理：</strong>只有当「底部时间爆量脉冲」与「右侧空间筹码密集峰(POC/HVN)」在关键位发生<strong>正交十字交叉</strong>时，才是具备机构流动性支撑的高胜率交易位置。
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 pt-1 font-mono-num">
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-[#ff5252] font-bold">周K阻力:</span> 189.75</div>
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-orange-400 font-bold">YRH:</span> 189.05</div>
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-[#00e5ff] font-bold">PMH:</span> 188.35</div>
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-teal-400 font-bold">YRC:</span> 187.90</div>
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-[#a78bfa] font-bold">PML:</span> 187.45</div>
+        <div class="bg-[#07090d] px-2.5 py-1.5 rounded border border-white/[0.08]"><span class="text-purple-400 font-bold">YRL:</span> 186.85</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 策略库大类别选择面板 -->
+  <div id="popover-library" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[min(940px,94vw)] glass-panel rounded-2xl p-5 text-sm shadow-2xl">
+    <div class="flex items-center justify-between pb-3 mb-4 border-b border-white/[0.08]">
+      <div class="flex items-center gap-3">
+        <span class="font-mono-num text-xs font-bold tracking-widest text-[#00e5ff]">// STRATEGY LIBRARY</span>
+        <span class="text-xs text-[#8b9bb4]">策略库 &middot; 选择一个策略类别进入对应工作台</span>
+      </div>
+      <button onclick="togglePopover('popover-library')" class="text-[#8b9bb4] hover:text-white text-lg leading-none">&#10005;</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+      <!-- 当前已上线策略 -->
+      <button onclick="togglePopover('popover-library')" class="group relative text-left rounded-xl p-4 border border-[#00e676]/50 bg-gradient-to-br from-[#00e676]/12 to-[#0c1017] hover:from-[#00e676]/20 transition-all">
+        <span class="absolute top-3 right-3 font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-[#00e676]/15 text-[#00e676] border border-[#00e676]/40">&#9679; ACTIVE</span>
+        <div class="font-mono-num text-[10px] text-[#00e676] tracking-widest mb-2">CAT 01 / 关键位反转</div>
+        <div class="text-base font-bold text-white mb-1">关键位 2B 反转</div>
+        <div class="font-mono-num text-[10px] text-[#8b9bb4] mb-3">KEY-LEVEL 2B REVERSAL</div>
+        <p class="text-xs text-[#8b9bb4] leading-relaxed">PMH/PML 流动性猎杀 &times; 时空共振确认 &times; 5S 微结构入场。</p>
+        <div class="mt-3 font-mono-num text-[10px] text-[#00e676] group-hover:translate-x-1 transition-transform">进入工作台 &rarr;</div>
+      </button>
+
+      <!-- 占位策略（即将上线） -->
+      <div class="rounded-xl p-4 border border-white/[0.07] bg-[#0c1017]/60 opacity-60">
+        <span class="float-right font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-[#526075] border border-white/10">SOON</span>
+        <div class="font-mono-num text-[10px] text-[#526075] tracking-widest mb-2">CAT 02 / 订单流</div>
+        <div class="text-base font-bold text-[#8b9bb4] mb-1">供需失衡反转</div>
+        <div class="font-mono-num text-[10px] text-[#526075]">ORDER-FLOW IMBALANCE</div>
+      </div>
+      <div class="rounded-xl p-4 border border-white/[0.07] bg-[#0c1017]/60 opacity-60">
+        <span class="float-right font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-[#526075] border border-white/10">SOON</span>
+        <div class="font-mono-num text-[10px] text-[#526075] tracking-widest mb-2">CAT 03 / 区间突破</div>
+        <div class="text-base font-bold text-[#8b9bb4] mb-1">开盘区间突破</div>
+        <div class="font-mono-num text-[10px] text-[#526075]">OPENING RANGE BREAKOUT</div>
+      </div>
+      <div class="rounded-xl p-4 border border-white/[0.07] bg-[#0c1017]/60 opacity-60">
+        <span class="float-right font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-[#526075] border border-white/10">SOON</span>
+        <div class="font-mono-num text-[10px] text-[#526075] tracking-widest mb-2">CAT 04 / 均值回归</div>
+        <div class="text-base font-bold text-[#8b9bb4] mb-1">VWAP 均值回归</div>
+        <div class="font-mono-num text-[10px] text-[#526075]">VWAP MEAN REVERSION</div>
+      </div>
+      <div class="rounded-xl p-4 border border-white/[0.07] bg-[#0c1017]/60 opacity-60">
+        <span class="float-right font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-[#526075] border border-white/10">SOON</span>
+        <div class="font-mono-num text-[10px] text-[#526075] tracking-widest mb-2">CAT 05 / 共振突破</div>
+        <div class="text-base font-bold text-[#8b9bb4] mb-1">时空共振突破</div>
+        <div class="font-mono-num text-[10px] text-[#526075]">TIME &times; SPACE BREAKOUT</div>
+      </div>
+      <div class="rounded-xl p-4 border border-white/[0.07] bg-[#0c1017]/60 opacity-60">
+        <span class="float-right font-mono-num text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-[#526075] border border-white/10">SOON</span>
+        <div class="font-mono-num text-[10px] text-[#526075] tracking-widest mb-2">CAT 06 / 多因子</div>
+        <div class="text-base font-bold text-[#8b9bb4] mb-1">量价因子共振</div>
+        <div class="font-mono-num text-[10px] text-[#526075]">VOL &times; PRICE FACTOR</div>
+      </div>
+    </div>
+    <div class="mt-4 pt-3 border-t border-white/[0.06] font-mono-num text-[10px] text-[#526075]">
+      当前已上线 1 / 6 个策略类别 &middot; 其余类别持续开发中
+    </div>
+  </div>
+
+  <!-- 核心图表主画布区域 -->
+  <main id="canvas-container" class="relative flex-1 w-full overflow-hidden bg-[#07090d]">
+    <canvas id="marketCanvas" class="block w-full h-full"></canvas>
+
+    <!-- 左上角精简悬浮剧本与原理提示条 -->
+    <div id="scenario-banner" class="pointer-events-none absolute top-3 left-3.5 z-10 max-w-[66%] sm:max-w-xl bg-[#0c1017]/88 backdrop-blur-md border border-white/[0.1] rounded-lg px-3.5 py-2.5 shadow-xl">
+      <div class="flex items-center gap-2">
+        <span id="banner-tag" class="font-mono-num px-2 py-0.5 rounded text-[11px] font-bold bg-[#00e676]/15 text-[#00e676] border border-[#00e676]/40">入场① · 突破PMH回踩2B</span>
+        <span id="banner-title" class="text-xs sm:text-sm font-bold text-[#edf2f7] truncate">首次波峰确立基准 · 二次冲高失败即止盈</span>
+      </div>
+      <p id="banner-desc" class="text-xs text-[#8b9bb4] mt-1.5 line-clamp-2 leading-relaxed">
+        07:30 盘前催化剂放量冲高确立 PMH(188.35) 与 PML(187.45)；09:30 开盘突破 PMH 后回踩触发时间爆量 × 空间筹码密集共振与 5S 2B 猎杀入场。
+      </p>
+    </div>
+  </main>
+
+  <!-- 底部时间轴与子弹时间回放控制栏 -->
+  <footer class="shrink-0 h-[52px] border-t border-white/[0.08] bg-[#07090d]/95 px-3 sm:px-5 flex items-center justify-between gap-3 z-20">
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="btn-play" onclick="togglePlay()" class="px-3.5 py-1.5 rounded-md bg-[#00e676] hover:bg-[#00e676]/90 text-[#07090d] font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,230,118,0.25)] transition-all">
+        <span id="play-icon">▶</span>
+        <span id="play-text">推演播放</span>
+      </button>
+      <button onclick="jumpToCatalyst()" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-md bg-[#a78bfa]/12 hover:bg-[#a78bfa]/20 text-[#a78bfa] border border-[#a78bfa]/35 font-mono-num text-xs font-medium transition-colors">
+        07:30 催化
+      </button>
+      <button onclick="jumpToOpen()" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-md bg-amber-400/12 hover:bg-amber-400/20 text-amber-300 border border-amber-400/35 font-mono-num text-xs font-medium transition-colors">
+        09:30 开盘
+      </button>
+      <button onclick="resetTimeline()" class="px-2.5 py-1.5 rounded-md bg-[#111722] hover:border-white/25 text-[#edf2f7] border border-white/[0.08] font-mono-num text-xs font-medium transition-colors">
+        全天总览
+      </button>
+    </div>
+
+    <div class="flex-1 flex items-center gap-3 max-w-2xl">
+      <span id="slider-time-start" class="font-mono-num text-xs text-[#526075] hidden sm:inline">04:00</span>
+      <input id="time-slider" type="range" min="1" max="96" value="96" oninput="onSliderInput(this.value)" class="w-full" />
+      <span id="slider-time-curr" class="font-mono-num text-xs sm:text-sm font-bold text-[#00e5ff] w-12 text-right">15:55</span>
+    </div>
+
+    <div id="bullet-status" class="hidden lg:flex items-center gap-2 font-mono-num text-[11px] text-[#526075] shrink-0">
+      <span class="w-1.5 h-1.5 rounded-full bg-[#00e5ff]"></span>
+      <span>AUTO 5S BULLET-TIME AT KEY LIQUIDITY</span>
+    </div>
+  </footer>
+
+  <script>
+    // 返回主页兼容处理
+    function goBackPortal(e) {
+      if (window.location.protocol === 'about:' || window.location.href.includes('srcdoc')) {
+        e.preventDefault();
+        alert('本地部署时将直接返回主页门户 (index.html)');
+        return false;
+      }
+      return true;
+    }
+
+    // =========================================================================
+    // 1. 全局配置与状态管理
+    // =========================================================================
+    const PRE_BARS = 18; // 04:00 - 09:25 盘前 K 线数量
+    const REG_BARS = 78; // 09:30 - 15:55 常规交易时段 K 线数量
+    const TOTAL_BARS = PRE_BARS + REG_BARS; // 总计 96 根 K 线
+
+    const KEY_LEVELS = [
+      { id: 'WEEKLY', label: '周K关键阻力', price: 189.75, color: '#ff5252', dash: [6, 4], width: 1.8 },
+      { id: 'YRH',    label: 'YRH 昨高',    price: 189.05, color: '#fb923c', dash: [4, 4], width: 1.3 },
+      { id: 'PMH',    label: 'PMH 盘前高',  price: 188.35, color: '#00e5ff', dash: [],     width: 2.0 },
+      { id: 'YRC',    label: 'YRC 昨收',    price: 187.90, color: '#2dd4bf', dash: [3, 3], width: 1.2 },
+      { id: 'PML',    label: 'PML 盘前低',  price: 187.45, color: '#a78bfa', dash: [],     width: 2.0 },
+      { id: 'YRL',    label: 'YRL 昨低',    price: 186.85, color: '#c084fc', dash: [4, 4], width: 1.3 }
+    ];
+
+    const BRANCH_INFO = {
+      '1_A': {
+        tag: '入场① · 分支1',
+        title: '首次波峰定锚 · 二次冲高失败即止盈',
+        desc: '突破 PMH 回踩引发「时间爆量 × 空间筹码密集」共振与 5S 2B 猎杀入场；随后推升至首峰确立最高收盘基准，二次冲高刺破基准未能站稳立即止盈。'
+      },
+      '1_B': {
+        tag: '入场① · 分支2',
+        title: '趋势衰减 · 有效跌破 VWAP 触发防守离场',
+        desc: '突破 PMH 回踩共振入场后冲高受阻，随后买盘动能衰竭跌破日内 VWAP 均价线且反抽无力，果断执行跟踪止盈保护利润。'
+      },
+      '1_C': {
+        tag: '入场① · 分支3',
+        title: '主升浪突破 · 触及周K关键阻力收长上影止盈',
+        desc: '突破 PMH 共振入场后依托 VWAP 稳步推升，盘中冲刺触及 189.75 周K宏观阻力位收出长上影倒锤线第一时间落袋，随后高位随机游走消化。'
+      },
+      '2_PMH_INV': {
+        tag: '入场② · PMH遇阻',
+        title: '高开诱多下杀猎 PML 拉起 · 站上 PMH 收倒锤线止盈',
+        desc: '09:30 高开诱多冲 PMH 后从高位一路下杀，深刺 PML(187.45) 完成 5S 2B/双底猎杀吸收后 V 型拉起，越过 PMH(188.35) 后买盘后继乏力收出长上影倒锤线，第一时间落袋。'
+      },
+      '2_A': {
+        tag: '入场② · 分支1',
+        title: '高开下杀猎 PML 站上 PMH 确认支撑 · 二次冲峰失败止盈',
+        desc: '高开诱多后从 PMH 上方一路下杀深刺 PML 获取流动性，V 型拉起并稳稳站上 PMH 确认多头掌控，随后无缝衔接主升浪并在二次冲击首峰基准失败处止盈。'
+      },
+      '2_B': {
+        tag: '入场② · 分支2',
+        title: '高开下杀猎 PML 站上 PMH 后动能转弱 · 破 VWAP 离场',
+        desc: '高开诱多后下杀深刺 PML 完成流动性猎杀，V 型拉起放量站上 PMH 后冲高回落，有效跌破 VWAP 均价线时果断离场锁定波段收益。'
+      },
+      '2_C': {
+        tag: '入场② · 分支3',
+        title: '高开下杀猎 PML 站上 PMH 走强 · 触及周K关键位止盈',
+        desc: '高开诱多后从高位下杀深刺 PML 完成猎杀并 V 型拉起，稳稳站上 PMH 后顺势推升至 189.75 周K宏观阻力位收长上影止盈，随后高位自然随机游走。'
+      }
+    };
+
+    const TIME_LABELS = (() => {
+      const labels = [];
+      const preTimes = [
+        '04:00', '04:20', '04:40', '05:00', '05:30', '06:00',
+        '06:30', '07:00', '07:15', '07:30', '07:45', '08:00',
+        '08:15', '08:30', '08:45', '09:00', '09:15', '09:25'
+      ];
+      for (let i = 0; i < PRE_BARS; i++) labels.push(preTimes[i]);
+      let mins = 9 * 60 + 30;
+      for (let i = 0; i < REG_BARS; i++) {
+        const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+        const mm = String(mins % 60).padStart(2, '0');
+        labels.push(`${hh}:${mm}`);
+        mins += 5;
+      }
+      return labels;
+    })();
+
+    let currentEntry = '1';
+    let currentExit = 'A';
+    let visibleBarsCount = TOTAL_BARS;
+    let isPlaying = false;
+    let playTimer = null;
+
+    let microPattern = '2B';
+    let microVisibleCount = 14;
+    let bulletTimeActive = false;
+    let bulletTimeTriggeredOnce = false;
+    let microAnimTimer = null;
+    let microBtnRects = null;
+
+    const layerState = {
+      resonance: true,
+      micro5s: true,
+      premarket: true,
+      goldenZone: true,
+      uCurve: true,
+      VWAP: true,
+      rrBox: false
+    };
+
+    let mousePos = { x: 0, y: 0, inside: false };
+    let hoverBarIndex = -1;
+    let layoutMetrics = null;
+    let microBoxRect = null;
+
+    const container = document.getElementById('canvas-container');
+    const canvas = document.getElementById('marketCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function createSeededRandom(seed) {
+      let s = seed % 2147483647;
+      if (s <= 0) s += 2147483646;
+      return () => {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    function drawRoundRect(context, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      context.beginPath();
+      context.moveTo(x + radius, y);
+      context.arcTo(x + w, y, x + w, y + h, radius);
+      context.arcTo(x + w, y + h, x, y + h, radius);
+      context.arcTo(x, y + h, x, y, radius);
+      context.arcTo(x, y, x + w, y, radius);
+      context.closePath();
+    }
+
+    // =========================================================================
+    // 2. 全天行情数据与美股日内 U 型成交量建模
+    // =========================================================================
+    function buildMarketDataset(entryType, exitType) {
+      const rand = createSeededRandom(entryType === '1' ? 202611 : 202688);
+      const bars = [];
+      const markers = [];
+      let peakBodyClose = null;
+      let peakAnchorIndex = -1;
+
+      const PMH = 188.35;
+      const PML = 187.45;
+
+      const getIntradayUBase = (regIdx) => {
+        const t = regIdx / (REG_BARS - 1);
+        const openSurge = 135 * Math.exp(-Math.pow(t / 0.14, 2));
+        const midValley = 34 + 58 * Math.pow((t - 0.52) / 0.48, 2);
+        const closeRally = 88 * Math.exp(-Math.pow((1 - t) / 0.13, 2));
+        return openSurge + midValley + closeRally;
+      };
+
+      for (let i = 0; i < TOTAL_BARS; i++) {
+        let open, high, low, close, volume, uBase = null;
+
+        if (i < PRE_BARS) {
+          if (i < 8) {
+            const base = 187.68 + Math.sin(i * 0.7) * 0.06;
+            open = i === 0 ? 187.65 : bars[i - 1].close;
+            close = base + (rand() - 0.48) * 0.05;
+            high = Math.max(open, close) + rand() * 0.04;
+            low = Math.min(open, close) - rand() * 0.04;
+            volume = 12 + rand() * 8;
+          } else if (i === 8) {
+            open = bars[i - 1].close + 0.08;
+            close = 188.08;
+            high = 188.14;
+            low = open - 0.03;
+            volume = 68;
+          } else if (i === 9) {
+            open = 188.08;
+            close = 188.24;
+            high = PMH;
+            low = 188.04;
+            volume = 96;
+            markers.push({
+              index: i,
+              type: 'CATALYST',
+              pos: 'above',
+              label: '07:30 催化冲顶确立 PMH',
+              color: '#00e5ff'
+            });
+          } else if (i >= 10 && i <= 13) {
+            open = bars[i - 1].close;
+            if (i === 13) {
+              close = 187.58;
+              low = PML;
+              high = open + 0.04;
+              volume = 74;
+              markers.push({
+                index: i,
+                type: 'PML_ANCHOR',
+                pos: 'below',
+                label: '洗盘承接确立 PML',
+                color: '#a78bfa'
+              });
+            } else {
+              close = open - (0.14 + rand() * 0.05);
+              high = open + 0.03;
+              low = close - 0.04;
+              volume = 36 + rand() * 14;
+            }
+          } else {
+            open = bars[i - 1].close;
+            const target = entryType === '1' ? 188.12 : 188.20;
+            close = open + (target - open) * 0.45 + (rand() - 0.5) * 0.04;
+            high = Math.min(PMH - 0.06, Math.max(open, close) + 0.05);
+            low = Math.max(PML + 0.06, Math.min(open, close) - 0.05);
+            volume = 22 + rand() * 10;
+          }
+        } else {
+          const regIdx = i - PRE_BARS;
+          uBase = getIntradayUBase(regIdx);
+
+          if (entryType === '1') {
+            if (regIdx === 0) {
+              open = 188.16; close = 188.54; high = 188.62; low = 188.12; volume = uBase * 1.18;
+            } else if (regIdx === 1) {
+              open = 188.54; close = 188.64; high = 188.70; low = 188.48; volume = uBase * 0.95;
+            } else if (regIdx === 2) {
+              open = 188.64; close = 188.46; high = 188.66; low = 188.40; volume = uBase * 0.88;
+            } else if (regIdx === 3) {
+              open = 188.46; close = 188.50; high = 188.54; low = 188.24; volume = uBase * 1.48;
+            } else if (regIdx === 4) {
+              open = 188.50; close = 188.76; high = 188.80; low = 188.48; volume = uBase * 1.25;
+              markers.push({
+                index: i,
+                type: 'ENTRY',
+                pos: 'below',
+                label: '入场① · 2B破颈追击',
+                color: '#00e676'
+              });
+            } else {
+              applyExitBranches(regIdx, i);
+            }
+          } else {
+            if (regIdx === 0) {
+              open = 188.30; close = 188.10; high = 188.56; low = 188.06; volume = uBase * 1.18;
+            } else if (regIdx === 1) {
+              open = 188.10; close = 187.64; high = 188.14; low = 187.31; volume = uBase * 1.52;
+            } else if (regIdx === 2) {
+              open = 187.64; close = 187.96; high = 188.02; low = 187.60; volume = uBase * 1.22;
+              markers.push({
+                index: i,
+                type: 'ENTRY',
+                pos: 'below',
+                label: '入场② · 高位下杀猎PML反转',
+                color: '#00e676'
+              });
+            } else if (regIdx === 3) {
+              open = 187.96; close = 188.24; high = 188.28; low = 187.92; volume = uBase * 1.05;
+            } else if (regIdx === 4) {
+              open = 188.24; close = 188.52; high = 188.58; low = 188.20; volume = uBase * 1.26;
+              if (exitType !== 'PMH_INV') {
+                markers.push({
+                  index: i,
+                  type: 'MILESTONE',
+                  pos: 'below',
+                  label: '站上PMH · 延续持仓',
+                  color: '#2dd4bf'
+                });
+              }
+            } else {
+              applyExitBranches(regIdx, i);
+            }
+          }
+        }
+
+        function applyExitBranches(regIdx, absIdx) {
+          const prevClose = bars[absIdx - 1].close;
+
+          if (entryType === '2' && exitType === 'PMH_INV') {
+            if (regIdx === 5) {
+              open = prevClose; close = 188.56; high = 188.62; low = 188.46; volume = uBase * 0.95;
+            } else if (regIdx === 6) {
+              open = prevClose; close = 188.42; high = 188.86; low = 188.38; volume = uBase * 1.18;
+              markers.push({
+                index: absIdx,
+                type: 'EXIT',
+                pos: 'above',
+                label: 'PMH倒锤线止盈',
+                color: '#fbbf24'
+              });
+            } else {
+              open = prevClose;
+              const drift = (188.15 - open) * 0.08 + (rand() - 0.52) * 0.08;
+              close = open + drift;
+              high = Math.max(open, close) + rand() * 0.05;
+              low = Math.min(open, close) - rand() * 0.05;
+              volume = uBase * (0.85 + rand() * 0.3);
+            }
+            return;
+          }
+
+          if (exitType === 'A') {
+            if (regIdx <= 12) {
+              const step = (189.28 - prevClose) / (13 - regIdx);
+              open = prevClose;
+              close = open + step + (rand() - 0.35) * 0.03;
+              high = Math.max(open, close) + 0.03 + rand() * 0.03;
+              low = Math.min(open, close) - 0.02 - rand() * 0.02;
+              volume = uBase * (0.95 + rand() * 0.25);
+            } else if (regIdx <= 23) {
+              const target = 188.86;
+              open = prevClose;
+              close = open + (target - open) * 0.24 + (rand() - 0.5) * 0.05;
+              high = Math.max(open, close) + 0.03;
+              low = Math.min(open, close) - 0.04;
+              volume = uBase * (0.78 + rand() * 0.22);
+            } else if (regIdx <= 33) {
+              let firstPeakClose = 189.26;
+              for (let k = PRE_BARS + 8; k <= PRE_BARS + 14; k++) {
+                if (bars[k] && bars[k].close > firstPeakClose) firstPeakClose = bars[k].close;
+              }
+              const target = firstPeakClose - 0.03;
+              open = prevClose;
+              close = open + (target - open) * 0.28 + (rand() - 0.45) * 0.04;
+              high = Math.min(firstPeakClose - 0.01, Math.max(open, close) + 0.03);
+              low = Math.min(open, close) - 0.03;
+              volume = uBase * (0.85 + rand() * 0.25);
+            } else if (regIdx === 34) {
+              let firstPeakClose = 189.26;
+              for (let k = PRE_BARS + 8; k <= PRE_BARS + 14; k++) {
+                if (bars[k] && bars[k].close > firstPeakClose) firstPeakClose = bars[k].close;
+              }
+              open = prevClose;
+              close = firstPeakClose - 0.06;
+              high = firstPeakClose + 0.07;
+              low = close - 0.03;
+              volume = uBase * 1.25;
+              markers.push({
+                index: absIdx,
+                type: 'EXIT',
+                pos: 'above',
+                label: '二峰未过基准 · 止盈',
+                color: '#fbbf24'
+              });
+            } else {
+              open = prevClose;
+              const target = 188.68;
+              close = open + (target - open) * 0.08 + (rand() - 0.54) * 0.07;
+              high = Math.max(open, close) + rand() * 0.04;
+              low = Math.min(open, close) - rand() * 0.05;
+              volume = uBase * (0.85 + rand() * 0.3);
+            }
+            return;
+          }
+
+          if (exitType === 'B') {
+            if (regIdx <= 14) {
+              const target = 189.18;
+              open = prevClose;
+              close = open + (target - open) * 0.22 + (rand() - 0.45) * 0.05;
+              high = Math.max(open, close) + 0.04;
+              low = Math.min(open, close) - 0.03;
+              volume = uBase * (0.9 + rand() * 0.25);
+            } else if (regIdx <= 27) {
+              open = prevClose;
+              close = open - 0.032 + (rand() - 0.5) * 0.04;
+              high = Math.max(open, close) + 0.03;
+              low = Math.min(open, close) - 0.03;
+              volume = uBase * (0.82 + rand() * 0.22);
+            } else if (regIdx === 28) {
+              open = prevClose;
+              close = open - 0.16;
+              high = open + 0.02;
+              low = close - 0.05;
+              volume = uBase * 1.32;
+              markers.push({
+                index: absIdx,
+                type: 'EXIT',
+                pos: 'below',
+                label: '破VWAP · 防守平仓',
+                color: '#ff5252'
+              });
+            } else {
+              open = prevClose;
+              const target = 188.05;
+              close = open + (target - open) * 0.07 + (rand() - 0.52) * 0.06;
+              high = Math.max(open, close) + rand() * 0.04;
+              low = Math.min(open, close) - rand() * 0.05;
+              volume = uBase * (0.85 + rand() * 0.3);
+            }
+            return;
+          }
+
+          if (exitType === 'C') {
+            if (regIdx <= 23) {
+              const step = (189.62 - prevClose) / (24 - regIdx);
+              open = prevClose;
+              close = open + step + (rand() - 0.42) * 0.04;
+              high = Math.max(open, close) + 0.04;
+              low = Math.min(open, close) - 0.03;
+              volume = uBase * (0.95 + rand() * 0.25);
+            } else if (regIdx === 24) {
+              open = prevClose;
+              close = 189.56;
+              high = 189.76;
+              low = 189.52;
+              volume = uBase * 1.38;
+              markers.push({
+                index: absIdx,
+                type: 'EXIT',
+                pos: 'above',
+                label: '触周K阻力长上影 · 止盈',
+                color: '#00e676'
+              });
+            } else {
+              open = prevClose;
+              const meanTarget = 189.48;
+              const revert = (meanTarget - open) * 0.14;
+              const noise = (rand() - 0.5) * 0.11;
+              close = Math.max(189.22, Math.min(189.68, open + revert + noise));
+              high = Math.min(189.73, Math.max(open, close) + rand() * 0.05);
+              low = Math.max(189.18, Math.min(open, close) - rand() * 0.05);
+              volume = uBase * (0.88 + rand() * 0.28);
+            }
+          }
+        }
+
+        bars.push({
+          index: i,
+          time: TIME_LABELS[i],
+          isPre: i < PRE_BARS,
+          open,
+          high,
+          low,
+          close,
+          volume,
+          uBase
+        });
+      }
+
+      let cumPV = 0;
+      let cumVol = 0;
+      for (let i = 0; i < bars.length; i++) {
+        if (i < PRE_BARS) {
+          bars[i].vwap = null;
+        } else {
+          const typical = (bars[i].high + bars[i].low + bars[i].close) / 3;
+          cumPV += typical * bars[i].volume;
+          cumVol += bars[i].volume;
+          bars[i].vwap = cumPV / cumVol;
+        }
+      }
+
+      if (exitType === 'A' && !(entryType === '2' && exitType === 'PMH_INV')) {
+        let maxClose = -Infinity;
+        for (let r = 8; r <= 14; r++) {
+          const b = bars[PRE_BARS + r];
+          if (b && b.close > maxClose) {
+            maxClose = b.close;
+            peakAnchorIndex = b.index;
+          }
+        }
+        peakBodyClose = maxClose;
+      }
+
+      const priceMin = 186.50;
+      const priceMax = 190.10;
+      const binCount = 36;
+      const binStep = (priceMax - priceMin) / binCount;
+      const vpBins = new Array(binCount).fill(0);
+
+      for (let i = 0; i < bars.length; i++) {
+        const b = bars[i];
+        const weight = b.isPre ? 0.65 : 1.0;
+        for (let k = 0; k < binCount; k++) {
+          const binLow = priceMin + k * binStep;
+          const binHigh = binLow + binStep;
+          if (b.high >= binLow && b.low <= binHigh) {
+            vpBins[k] += (b.volume * weight) / Math.max(1, (b.high - b.low) / binStep);
+          }
+        }
+      }
+
+      const focusPrice = entryType === '1' ? PMH : PML;
+      for (let k = 0; k < binCount; k++) {
+        const mid = priceMin + (k + 0.5) * binStep;
+        const dist = Math.abs(mid - focusPrice);
+        if (dist < 0.25) {
+          vpBins[k] *= (1.65 - dist * 1.8);
+        }
+      }
+
+      const maxVp = Math.max(...vpBins);
+      const maxVol = Math.max(...bars.map(b => b.volume));
+      const resonanceBarIdx = entryType === '1' ? PRE_BARS + 3 : PRE_BARS + 1;
+
+      return {
+        bars,
+        markers,
+        vpBins,
+        maxVp,
+        maxVol,
+        priceMin,
+        priceMax,
+        binStep,
+        peakBodyClose,
+        peakAnchorIndex,
+        resonanceBarIdx,
+        focusPrice
+      };
+    }
+
+    let dataset = buildMarketDataset(currentEntry, currentExit);
+
+    // =========================================================================
+    // 3. 自适应尺寸计算与全流程 Canvas 渲染管线（对齐主页暗黑精密网格风格）
+    // =========================================================================
+    function resizeCanvas() {
+      if (!container || !canvas || !ctx) return;
+      const rect = container.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(320, Math.floor(rect.width));
+      const h = Math.max(260, Math.floor(rect.height));
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawAll();
+    }
+
+    function drawAll() {
+      try {
+        if (!container || !canvas || !ctx) return;
+        const rect = container.getBoundingClientRect();
+        const W = rect.width;
+        const H = rect.height;
+        if (W <= 10 || H <= 10) return;
+
+        const isCompact = W < 760;
+        const uiScale = Math.max(0.9, Math.min(1.22, W / 1180));
+
+        const padTop = Math.round(14 * uiScale);
+        const padBottom = Math.round(28 * uiScale);
+        const padLeft = isCompact ? 56 : Math.round(78 * uiScale);
+        const padRight = isCompact ? 52 : Math.round(66 * uiScale);
+        const vpWidth = isCompact ? Math.round(W * 0.16) : Math.round(W * 0.18);
+        const splitX = W - padRight - vpWidth;
+        const volHeight = Math.round((H - padTop - padBottom) * 0.23);
+        const mainBottom = H - padBottom - volHeight;
+        const chartWidth = splitX - padLeft;
+        const chartHeight = mainBottom - padTop;
+
+        layoutMetrics = {
+          W, H, padTop, padBottom, padLeft, padRight,
+          splitX, mainBottom, chartWidth, chartHeight, vpWidth, uiScale, isCompact
+        };
+
+        const priceToY = (p) => {
+          const ratio = (p - dataset.priceMin) / (dataset.priceMax - dataset.priceMin);
+          return mainBottom - ratio * chartHeight;
+        };
+        const barCenterX = (idx) => padLeft + (idx + 0.5) * (chartWidth / TOTAL_BARS);
+        const barWidth = Math.max(2.5, (chartWidth / TOTAL_BARS) * 0.58);
+
+        const floatingLabels = [];
+        const candleBoxes = visibleBarsLocal => {
+          const boxes = [];
+          visibleBarsLocal.forEach((b, idx) => {
+            const x = barCenterX(idx);
+            const yO = priceToY(b.open), yC = priceToY(b.close);
+            const yH = priceToY(b.high), yL = priceToY(b.low);
+            boxes.push({
+              x0: x - barWidth / 2 - 1, x1: x + barWidth / 2 + 1,
+              bodyTop: Math.min(yO, yC) - 1, bodyBot: Math.max(yO, yC) + 1,
+              wickTop: yH - 1, wickBot: yL + 1,
+              x
+            });
+          });
+          return boxes;
+        };
+
+        // 1. 清空画布并叠加主页同款 #07090d 深空精密点阵网格
+        ctx.fillStyle = '#07090d';
+        ctx.fillRect(0, 0, W, H);
+
+        const radGrad = ctx.createRadialGradient(W * 0.5, 0, 10, W * 0.5, 0, W * 0.65);
+        radGrad.addColorStop(0, 'rgba(0, 229, 255, 0.04)');
+        radGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = radGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.022)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let gx = 0; gx <= W; gx += 40) {
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, H);
+        }
+        for (let gy = 0; gy <= H; gy += 40) {
+          ctx.moveTo(0, gy);
+          ctx.lineTo(W, gy);
+        }
+        ctx.stroke();
+
+        // 2. 盘前时段背景区 (04:00 - 09:25)
+        const openX = padLeft + PRE_BARS * (chartWidth / TOTAL_BARS);
+        if (layerState.premarket) {
+          const preGrad = ctx.createLinearGradient(padLeft, padTop, openX, padTop);
+          preGrad.addColorStop(0, 'rgba(167, 139, 250, 0.09)');
+          preGrad.addColorStop(1, 'rgba(167, 139, 250, 0.03)');
+          ctx.fillStyle = preGrad;
+          ctx.fillRect(padLeft, padTop, openX - padLeft, H - padTop - padBottom);
+
+          ctx.save();
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = 'rgba(167, 139, 250, 0.42)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(openX, padTop);
+          ctx.lineTo(openX, H - padBottom);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.font = `600 ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+          ctx.fillStyle = 'rgba(167, 139, 250, 0.85)';
+          ctx.textAlign = 'center';
+          ctx.fillText('盘前定界 (04:00–09:30)', (padLeft + openX) / 2, mainBottom - 10);
+        }
+
+        // 3. 黄金狩猎时区背景光带 (09:30 - 10:30)
+        if (layerState.goldenZone) {
+          const goldenEndX = padLeft + (PRE_BARS + 12) * (chartWidth / TOTAL_BARS);
+          const goldGrad = ctx.createLinearGradient(openX, padTop, goldenEndX, padTop);
+          goldGrad.addColorStop(0, 'rgba(251, 191, 36, 0.10)');
+          goldGrad.addColorStop(1, 'rgba(251, 191, 36, 0.015)');
+          ctx.fillStyle = goldGrad;
+          ctx.fillRect(openX, padTop, goldenEndX - openX, H - padTop - padBottom);
+
+          ctx.save();
+          ctx.setLineDash([3, 4]);
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(goldenEndX, padTop);
+          ctx.lineTo(goldenEndX, H - padBottom);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.font = `600 ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+          ctx.fillStyle = 'rgba(252, 211, 77, 0.85)';
+          ctx.textAlign = 'center';
+          ctx.fillText('黄金时区', (openX + goldenEndX) / 2, padTop + Math.round(16 * uiScale));
+        }
+
+        // 4. 价格水平网格线与右侧价格轴刻度
+        ctx.font = `500 ${Math.round(11 * uiScale)}px "JetBrains Mono", monospace`;
+        for (let p = 186.5; p <= 190.01; p += 0.5) {
+          const y = priceToY(p);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(padLeft, y);
+          ctx.lineTo(splitX, y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#526075';
+          ctx.textAlign = 'left';
+          ctx.fillText(p.toFixed(2), splitX + vpWidth + 8, y + 4);
+        }
+
+        // 5. 绘制关键位置水平线
+        KEY_LEVELS.forEach(lvl => {
+          const y = priceToY(lvl.price);
+          ctx.save();
+          if (lvl.dash.length) ctx.setLineDash(lvl.dash);
+          ctx.strokeStyle = lvl.color;
+          ctx.globalAlpha = (lvl.id === 'PMH' || lvl.id === 'PML' || lvl.id === 'WEEKLY') ? 0.85 : 0.48;
+          ctx.lineWidth = lvl.width;
+          ctx.beginPath();
+          ctx.moveTo(padLeft, y);
+          ctx.lineTo(splitX, y);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.font = `700 ${Math.round(11 * uiScale)}px "JetBrains Mono", monospace`;
+          ctx.fillStyle = lvl.color;
+          ctx.textAlign = 'right';
+          ctx.fillText(`${lvl.id} ${lvl.price.toFixed(2)}`, padLeft - 8, y + 4);
+        });
+
+        // 6. 分支 1：首次波峰实体最高收盘基准线
+        if (dataset.peakBodyClose !== null && visibleBarsCount > dataset.peakAnchorIndex) {
+          const py = priceToY(dataset.peakBodyClose);
+          const startX = barCenterX(dataset.peakAnchorIndex);
+          ctx.save();
+          ctx.setLineDash([5, 3]);
+          ctx.strokeStyle = '#00e5ff';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(startX, py);
+          ctx.lineTo(splitX, py);
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.fillStyle = '#00e5ff';
+          ctx.beginPath();
+          ctx.arc(startX, py, 3.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.font = `600 ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+          ctx.fillStyle = '#00e5ff';
+          ctx.textAlign = 'right';
+          ctx.fillText(`首峰实体最高收盘 ${dataset.peakBodyClose.toFixed(2)}`, splitX - 8, py - 6);
+        }
+
+        // 7. 全贯穿式「时间爆量 × 空间筹码密集」正交共振投影
+        const resIdx = dataset.resonanceBarIdx;
+        const resX = barCenterX(resIdx);
+        const resY = priceToY(dataset.focusPrice);
+        if (layerState.resonance && visibleBarsCount > resIdx) {
+          drawResonanceProjection(resX, resY, padLeft, splitX, mainBottom, H - padBottom, vpWidth, barWidth, uiScale);
+          floatingLabels.push({
+            type: 'resonance',
+            anchorX: resX,
+            anchorY: resY,
+            prefer: 'above',
+            text: '✦ 时间爆量 × 空间筹码密集共振',
+            color: '#fde68a',
+            stroke: '#fbbf24',
+            bold: true
+          });
+        }
+
+        // 8. 绘制 K 线蜡烛图（采用主页同款 #00e676 绿 / #ff5252 红）
+        const visibleBars = dataset.bars.slice(0, visibleBarsCount);
+        visibleBars.forEach((b, idx) => {
+          const x = barCenterX(idx);
+          const isUp = b.close >= b.open;
+          const color = isUp ? '#00e676' : '#ff5252';
+          const yHigh = priceToY(b.high);
+          const yLow = priceToY(b.low);
+          const yOpen = priceToY(b.open);
+          const yClose = priceToY(b.close);
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(x, yHigh);
+          ctx.lineTo(x, yLow);
+          ctx.stroke();
+
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyH = Math.max(2, Math.abs(yClose - yOpen));
+          ctx.fillStyle = color;
+          ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyH);
+        });
+
+        // 9. 绘制日内 VWAP 均价线
+        if (layerState.VWAP && visibleBarsCount > PRE_BARS) {
+          ctx.save();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          let started = false;
+          for (let i = PRE_BARS; i < visibleBarsCount; i++) {
+            const b = dataset.bars[i];
+            if (b.vwap !== null) {
+              const vx = barCenterX(i);
+              const vy = priceToY(b.vwap);
+              if (!started) {
+                ctx.moveTo(vx, vy);
+                started = true;
+              } else {
+                ctx.lineTo(vx, vy);
+              }
+            }
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 10. 可选 R:R 盈亏比测量盒
+        if (layerState.rrBox && visibleBarsCount > PRE_BARS + 5) {
+          drawOptionalRRBox(barCenterX, priceToY, uiScale);
+        }
+
+        // 11. 绘制底部时间成交量柱状图 + 美股 U 型量能包络曲线
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padLeft, mainBottom);
+        ctx.lineTo(W - padRight, mainBottom);
+        ctx.stroke();
+
+        const volDrawH = volHeight - 12;
+        visibleBars.forEach((b, idx) => {
+          const x = barCenterX(idx);
+          const isUp = b.close >= b.open;
+          const vh = (b.volume / dataset.maxVol) * volDrawH;
+          const vy = H - padBottom - vh;
+          const isResonanceBar = layerState.resonance && idx === resIdx;
+
+          if (isResonanceBar) {
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(x - barWidth / 2 - 1, vy - 1, barWidth + 2, vh + 1);
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 1.4;
+            ctx.strokeRect(x - barWidth / 2 - 1.5, vy - 1.5, barWidth + 3, vh + 1.5);
+          } else {
+            ctx.fillStyle = isUp ? 'rgba(0, 230, 118, 0.48)' : 'rgba(255, 82, 82, 0.48)';
+            ctx.fillRect(x - barWidth / 2, vy, barWidth, vh);
+          }
+        });
+
+        if (layerState.uCurve) {
+          ctx.save();
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.72)';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          let uStarted = false;
+          for (let i = PRE_BARS; i < TOTAL_BARS; i++) {
+            const b = dataset.bars[i];
+            if (b.uBase !== null) {
+              const ux = barCenterX(i);
+              const uy = H - padBottom - (b.uBase / dataset.maxVol) * volDrawH;
+              if (!uStarted) {
+                ctx.moveTo(ux, uy);
+                uStarted = true;
+              } else {
+                ctx.lineTo(ux, uy);
+              }
+            }
+          }
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.font = `600 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+          ctx.fillStyle = 'rgba(252, 211, 77, 0.85)';
+          ctx.textAlign = 'left';
+          ctx.fillText('Volume × Time (U型日内分布)', padLeft + 6, mainBottom + Math.round(15 * uiScale));
+        }
+
+        // 12. 绘制右侧空间筹码分布 Volume Profile
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(splitX, padTop);
+        ctx.lineTo(splitX, H - padBottom);
+        ctx.stroke();
+
+        const binH = chartHeight / dataset.vpBins.length;
+        dataset.vpBins.forEach((val, k) => {
+          const binMidPrice = dataset.priceMin + (k + 0.5) * dataset.binStep;
+          const by = mainBottom - (k + 1) * binH;
+          const bw = (val / dataset.maxVp) * (vpWidth - 8);
+          const isFocusZone = layerState.resonance && Math.abs(binMidPrice - dataset.focusPrice) < 0.16;
+
+          if (isFocusZone) {
+            ctx.fillStyle = 'rgba(0, 229, 255, 0.65)';
+            ctx.fillRect(splitX + 1, by + 0.5, bw, Math.max(1.5, binH - 1));
+            ctx.strokeStyle = '#00e5ff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(splitX + 1, by + 0.5, bw, Math.max(1.5, binH - 1));
+          } else {
+            ctx.fillStyle = 'rgba(139, 155, 180, 0.28)';
+            ctx.fillRect(splitX + 1, by + 0.5, bw, Math.max(1.5, binH - 1));
+          }
+        });
+
+        ctx.font = `600 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+        ctx.fillStyle = '#8b9bb4';
+        ctx.textAlign = 'center';
+        ctx.fillText('筹码分布 POC', splitX + vpWidth / 2, mainBottom + Math.round(15 * uiScale));
+
+        // 13. 收集关键入场/出场/催化信号标签
+        dataset.markers.forEach(m => {
+          if (m.index >= visibleBarsCount) return;
+          const b = dataset.bars[m.index];
+          floatingLabels.push({
+            type: 'marker',
+            subtype: m.type,
+            anchorX: barCenterX(m.index),
+            anchorY: m.pos === 'above' ? priceToY(b.high) : priceToY(b.low),
+            prefer: m.pos === 'above' ? 'above' : 'below',
+            text: m.label,
+            color: m.color,
+            bold: true
+          });
+        });
+
+        // 14. 底部 X 轴时间刻度
+        ctx.font = `500 ${Math.round(11 * uiScale)}px "JetBrains Mono", monospace`;
+        ctx.textAlign = 'center';
+        const tickIndices = isCompact
+          ? [0, 9, PRE_BARS, PRE_BARS + 12, PRE_BARS + 30, PRE_BARS + 48, PRE_BARS + 66]
+          : [0, 5, 9, 13, PRE_BARS, PRE_BARS + 6, PRE_BARS + 12, PRE_BARS + 24, PRE_BARS + 36, PRE_BARS + 48, PRE_BARS + 60, PRE_BARS + 72];
+
+        tickIndices.forEach(idx => {
+          if (idx < TOTAL_BARS) {
+            const tx = barCenterX(idx);
+            ctx.fillStyle = idx === PRE_BARS ? '#00e5ff' : (idx === 9 ? '#a78bfa' : '#526075');
+            ctx.fillText(TIME_LABELS[idx], tx, H - 9);
+          }
+        });
+
+        // 15. 5S 微观结构放大镜
+        if (layerState.micro5s && visibleBarsCount >= resIdx + 1) {
+          drawMicro5sCallout(resX, resY, uiScale);
+        } else {
+          microBtnRects = null;
+          microBoxRect = null;
+        }
+
+        // 16. 鼠标/触控十字准星
+        if (mousePos.inside && hoverBarIndex >= 0 && hoverBarIndex < visibleBarsCount) {
+          const hx = barCenterX(hoverBarIndex);
+          const hBar = dataset.bars[hoverBarIndex];
+          const hy = priceToY(hBar.close);
+
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = 'rgba(237, 242, 247, 0.42)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(hx, padTop);
+          ctx.lineTo(hx, H - padBottom);
+          ctx.moveTo(padLeft, hy);
+          ctx.lineTo(splitX, hy);
+          ctx.stroke();
+          ctx.restore();
+
+          drawPriceTag(splitX + vpWidth + 4, hy, hBar.close.toFixed(2), '#00e5ff', uiScale);
+        }
+
+        // 17. 统一浮动标签避让布局
+        layoutFloatingLabels(floatingLabels, candleBoxes(visibleBars), {
+          padLeft, splitX, padTop, mainBottom, W, H, uiScale, isCompact,
+          microBox: microBoxRect
+        });
+      } catch (err) {
+        console.error('Render error:', err);
+      }
+    }
+
+    function layoutFloatingLabels(labels, boxes, geo) {
+      if (!labels.length) return;
+      const { padLeft, splitX, padTop, mainBottom, uiScale, isCompact } = geo;
+      const bh = Math.round(20 * uiScale);
+      const gap = 10;
+
+      const bannerPad = isCompact ? 6 : 8;
+      const bannerRect = {
+        x0: 0, y0: 0,
+        x1: (isCompact ? geo.W * 0.66 + 16 : 600 + bannerPad),
+        y1: padTop + 92
+      };
+      const obstacles = [bannerRect];
+      if (geo.microBox) obstacles.push(geo.microBox);
+
+      const overlap = (a, b) => {
+        const ow = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+        const oh = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+        return (ow > 0 && oh > 0) ? ow * oh : 0;
+      };
+
+      const prio = { resonance: 0, EXIT: 1, ENTRY: 2, PML_ANCHOR: 3, CATALYST: 4, MILESTONE: 4 };
+      const sorted = labels.slice().sort((a, b) => {
+        const pa = a.type === 'resonance' ? 0 : (prio[a.subtype] ?? 3);
+        const pb = b.type === 'resonance' ? 0 : (prio[b.subtype] ?? 3);
+        return pa - pb;
+      });
+
+      const placed = [];
+      sorted.forEach(label => {
+        ctx.font = `${label.bold ? '700' : '600'} ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+        const tw = ctx.measureText(label.text).width;
+        const bw = tw + 16;
+        const ax = label.anchorX, ay = label.anchorY;
+
+        const cands = [];
+        const vertLayers = [gap, gap + bh + 6, gap + (bh + 6) * 2];
+        const hOffsets = [0, -0.5, 0.5, -1, 1, -1.5, 1.5];
+        const directions = label.prefer === 'below' ? ['below', 'above'] : ['above', 'below'];
+        directions.forEach(dir => {
+          vertLayers.forEach(vl => {
+            hOffsets.forEach(ho => {
+              let bx = ax + ho * (bw + 6) - bw / 2;
+              let by = dir === 'above' ? ay - gap - vl - bh : ay + gap + vl;
+              bx = Math.max(padLeft + 4, Math.min(splitX - bw - 4, bx));
+              by = Math.max(padTop + 4, Math.min(mainBottom - bh - 4, by));
+              cands.push({ x: bx, y: by, w: bw, h: bh, dir });
+            });
+          });
+        });
+
+        let best = null, bestScore = Infinity;
+        cands.forEach(c => {
+          const rect = { x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h };
+          let score = 0;
+          boxes.forEach(b => {
+            const bodyRect = { x0: b.x0, y0: b.bodyTop, x1: b.x1, y1: b.bodyBot };
+            score += overlap(rect, bodyRect) * 1.0;
+            const wickRect = { x0: b.x - 0.7, y0: b.wickTop, x1: b.x + 0.7, y1: b.wickBot };
+            score += overlap(rect, wickRect) * 0.15;
+          });
+          obstacles.forEach(o => { score += overlap(rect, o) * 2.5; });
+          placed.forEach(p => { score += overlap(rect, p) * 1.8; });
+          score += Math.abs(c.x + c.w / 2 - ax) * 0.05 + Math.abs(c.y - ay) * 0.08;
+          if (c.dir !== label.prefer) score += 12;
+          if (score < bestScore) { bestScore = score; best = c; }
+        });
+
+        if (!best) return;
+        const rect = { x0: best.x, y0: best.y, x1: best.x + best.w, y1: best.y + best.h };
+        placed.push(rect);
+
+        const attachX = Math.max(best.x + 6, Math.min(best.x + best.w - 6, ax));
+        const attachY = best.dir === 'above' ? best.y + best.h : best.y;
+        ctx.save();
+        ctx.strokeStyle = label.stroke || label.color;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(attachX, attachY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = label.color;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(12, 16, 23, 0.96)';
+        drawRoundRect(ctx, best.x, best.y, best.w, best.h, 6);
+        ctx.fill();
+        ctx.strokeStyle = label.stroke || label.color;
+        ctx.lineWidth = 1.25;
+        ctx.stroke();
+        ctx.fillStyle = label.color;
+        ctx.font = `${label.bold ? '700' : '600'} ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(label.text, best.x + best.w / 2, best.y + best.h * 0.68);
+      });
+    }
+
+    function drawResonanceProjection(resX, resY, padLeft, splitX, mainBottom, bottomY, vpWidth, barWidth, uiScale) {
+      ctx.save();
+
+      const vBeamW = Math.max(14, barWidth * 2.2);
+      const vGrad = ctx.createLinearGradient(0, resY, 0, bottomY);
+      vGrad.addColorStop(0, 'rgba(251, 191, 36, 0.22)');
+      vGrad.addColorStop(1, 'rgba(251, 191, 36, 0.04)');
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(resX - vBeamW / 2, resY, vBeamW, bottomY - resY);
+
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(resX, resY);
+      ctx.lineTo(resX, bottomY - 4);
+      ctx.stroke();
+
+      const hBeamH = Math.round(16 * uiScale);
+      const hGrad = ctx.createLinearGradient(resX, 0, splitX + vpWidth, 0);
+      hGrad.addColorStop(0, 'rgba(0, 229, 255, 0.22)');
+      hGrad.addColorStop(1, 'rgba(0, 229, 255, 0.06)');
+      ctx.fillStyle = hGrad;
+      ctx.fillRect(resX, resY - hBeamH / 2, splitX + vpWidth - resX, hBeamH);
+
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo(resX, resY);
+      ctx.lineTo(splitX + vpWidth - 6, resY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.20)';
+      ctx.beginPath();
+      ctx.arc(resX, resY, 16 * uiScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(resX, resY, 9 * uiScale, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath();
+      ctx.arc(resX, resY, 4 * uiScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = `700 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+      ctx.fillStyle = '#fde047';
+      ctx.textAlign = 'left';
+      ctx.fillText('▲ 时间爆量峰值', resX + 8, mainBottom + Math.round(30 * uiScale));
+
+      ctx.restore();
+    }
+
+    function drawOptionalRRBox(barCenterX, priceToY, uiScale) {
+      const entryIdx = currentEntry === '1' ? PRE_BARS + 4 : PRE_BARS + 2;
+      const exitMarker = dataset.markers.find(m => m.type === 'EXIT');
+      const endIdx = exitMarker ? exitMarker.index : PRE_BARS + 34;
+
+      const entryPrice = dataset.bars[entryIdx].close;
+      const stopPrice = currentEntry === '1' ? 188.18 : 187.25;
+      const targetPrice = exitMarker ? dataset.bars[endIdx].high : 189.30;
+
+      const x1 = barCenterX(entryIdx);
+      const x2 = barCenterX(endIdx);
+      const yEntry = priceToY(entryPrice);
+      const yStop = priceToY(stopPrice);
+      const yTarget = priceToY(targetPrice);
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.14)';
+      ctx.fillRect(x1, yTarget, x2 - x1, yEntry - yTarget);
+      ctx.fillStyle = 'rgba(255, 82, 82, 0.16)';
+      ctx.fillRect(x1, yEntry, x2 - x1, yStop - yEntry);
+
+      const rr = ((targetPrice - entryPrice) / Math.max(0.05, entryPrice - stopPrice)).toFixed(1);
+      ctx.font = `700 ${Math.round(11 * uiScale)}px "JetBrains Mono", monospace`;
+      ctx.fillStyle = '#00e676';
+      ctx.textAlign = 'left';
+      ctx.fillText(`R:R 1:${rr}`, x1 + 6, yTarget + Math.round(15 * uiScale));
+      ctx.restore();
+    }
+
+    function drawPriceTag(x, y, text, bgColor, uiScale) {
+      const w = Math.round(52 * uiScale);
+      const h = Math.round(18 * uiScale);
+      ctx.fillStyle = bgColor;
+      drawRoundRect(ctx, x, y - h / 2, w, h, 4);
+      ctx.fill();
+      ctx.font = `700 ${Math.round(11 * uiScale)}px "JetBrains Mono", monospace`;
+      ctx.fillStyle = '#07090d';
+      ctx.textAlign = 'center';
+      ctx.fillText(text, x + w / 2, y + 4);
+    }
+
+    // =========================================================================
+    // 4. 5S 子弹时间微观结构放大镜（对齐主页暗黑终端卡片质感）
+    // =========================================================================
+    function drawMicro5sCallout(anchorX, anchorY, uiScale) {
+      if (!layoutMetrics) return;
+      const { splitX, mainBottom, chartWidth, chartHeight, isCompact } = layoutMetrics;
+
+      const boxW = isCompact ? Math.min(265, chartWidth * 0.56) : Math.min(370, chartWidth * 0.37);
+      const boxH = isCompact ? Math.min(185, chartHeight * 0.52) : Math.min(238, chartHeight * 0.50);
+      const boxX = splitX - boxW - Math.round(14 * uiScale);
+      const boxY = mainBottom - boxH - Math.round(12 * uiScale);
+      microBoxRect = { x0: boxX - 4, y0: boxY - 4, x1: boxX + boxW + 4, y1: boxY + boxH + 4 };
+
+      ctx.save();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = bulletTimeActive ? '#fbbf24' : 'rgba(0, 229, 255, 0.65)';
+      ctx.lineWidth = bulletTimeActive ? 2 : 1.3;
+      ctx.beginPath();
+      ctx.moveTo(anchorX, anchorY);
+      ctx.lineTo(boxX, boxY + boxH * 0.55);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(12, 16, 23, 0.96)';
+      drawRoundRect(ctx, boxX, boxY, boxW, boxH, 10);
+      ctx.fill();
+      ctx.strokeStyle = bulletTimeActive ? '#fbbf24' : 'rgba(0, 229, 255, 0.55)';
+      ctx.lineWidth = bulletTimeActive ? 2.2 : 1.35;
+      ctx.stroke();
+
+      const headerH = Math.round(32 * uiScale);
+      ctx.fillStyle = 'rgba(17, 23, 34, 0.95)';
+      drawRoundRect(ctx, boxX + 1, boxY + 1, boxW - 2, headerH, 9);
+      ctx.fill();
+
+      ctx.font = `700 ${Math.round(11 * uiScale)}px Inter, sans-serif`;
+      ctx.fillStyle = bulletTimeActive ? '#fde047' : '#00e5ff';
+      ctx.textAlign = 'left';
+      const levelName = currentEntry === '1' ? 'PMH' : 'PML';
+      ctx.fillText(`🔍 5S微结构 (${levelName})`, boxX + 10, boxY + headerH * 0.66);
+
+      const btnH = Math.round(20 * uiScale);
+      const btnY = boxY + (headerH - btnH) / 2;
+      const btnDbW = Math.round(38 * uiScale);
+      const btn2bW = Math.round(48 * uiScale);
+      const btnPlayW = Math.round(42 * uiScale);
+
+      const btnDbX = boxX + boxW - btnDbW - 8;
+      const btn2bX = btnDbX - btn2bW - 4;
+      const btnPlayX = btn2bX - btnPlayW - 4;
+
+      microBtnRects = {
+        play: { x: btnPlayX, y: btnY, w: btnPlayW, h: btnH },
+        b2b:  { x: btn2bX,  y: btnY, w: btn2bW,  h: btnH },
+        db:   { x: btnDbX,   y: btnY, w: btnDbW,   h: btnH }
+      };
+
+      const drawPill = (rect, text, active, activeBg) => {
+        ctx.fillStyle = active ? activeBg : 'rgba(7, 9, 13, 0.9)';
+        drawRoundRect(ctx, rect.x, rect.y, rect.w, rect.h, 5);
+        ctx.fill();
+        ctx.strokeStyle = active ? '#edf2f7' : 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.font = `700 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+        ctx.fillStyle = active ? '#07090d' : '#8b9bb4';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, rect.x + rect.w / 2, rect.y + rect.h * 0.68);
+      };
+
+      drawPill(microBtnRects.play, '▶5S', bulletTimeActive, '#fbbf24');
+      drawPill(microBtnRects.b2b, '标准2B', microPattern === '2B', '#00e5ff');
+      drawPill(microBtnRects.db, '双底', microPattern === 'DB', '#00e676');
+
+      const innerLeft = boxX + Math.round(44 * uiScale);
+      const innerRight = boxX + boxW - 12;
+      const innerTop = boxY + headerH + 12;
+      const innerBottom = boxY + boxH - Math.round(26 * uiScale);
+      const innerW = innerRight - innerLeft;
+      const innerH = innerBottom - innerTop;
+
+      const candles5s = microPattern === '2B' ? [
+        { o: 0.78, h: 0.80, l: 0.62, c: 0.65 },
+        { o: 0.65, h: 0.67, l: 0.48, c: 0.52 },
+        { o: 0.52, h: 0.55, l: 0.22, c: 0.44 },
+        { o: 0.44, h: 0.64, l: 0.42, c: 0.60 },
+        { o: 0.60, h: 0.68, l: 0.54, c: 0.65 },
+        { o: 0.65, h: 0.66, l: 0.43, c: 0.47 },
+        { o: 0.47, h: 0.53, l: 0.39, c: 0.50 },
+        { o: 0.50, h: 0.62, l: 0.48, c: 0.59 },
+        { o: 0.59, h: 0.72, l: 0.57, c: 0.69 },
+        { o: 0.69, h: 0.80, l: 0.66, c: 0.77 },
+        { o: 0.77, h: 0.84, l: 0.72, c: 0.75 },
+        { o: 0.75, h: 0.88, l: 0.74, c: 0.85 },
+        { o: 0.85, h: 0.92, l: 0.81, c: 0.89 },
+        { o: 0.89, h: 0.96, l: 0.86, c: 0.94 }
+      ] : [
+        { o: 0.72, h: 0.74, l: 0.48, c: 0.50 },
+        { o: 0.50, h: 0.52, l: 0.25, c: 0.30 },
+        { o: 0.30, h: 0.38, l: 0.18, c: 0.35 },
+        { o: 0.35, h: 0.52, l: 0.33, c: 0.49 },
+        { o: 0.49, h: 0.66, l: 0.47, c: 0.63 },
+        { o: 0.63, h: 0.70, l: 0.56, c: 0.58 },
+        { o: 0.58, h: 0.60, l: 0.34, c: 0.37 },
+        { o: 0.37, h: 0.41, l: 0.20, c: 0.26 },
+        { o: 0.26, h: 0.45, l: 0.24, c: 0.43 },
+        { o: 0.43, h: 0.62, l: 0.41, c: 0.59 },
+        { o: 0.59, h: 0.75, l: 0.57, c: 0.73 },
+        { o: 0.73, h: 0.83, l: 0.70, c: 0.80 },
+        { o: 0.80, h: 0.89, l: 0.77, c: 0.86 },
+        { o: 0.86, h: 0.95, l: 0.84, c: 0.93 }
+      ];
+
+      const keyNorm = 0.42;
+      const neckNorm = microPattern === '2B' ? 0.68 : 0.70;
+      const normToY = (n) => innerBottom - n * innerH;
+
+      const keyY = normToY(keyNorm);
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.12)';
+      ctx.fillRect(innerLeft, keyY - 3, innerW, 6);
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(innerLeft, keyY);
+      ctx.lineTo(innerRight, keyY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00e5ff';
+      drawRoundRect(ctx, boxX + 6, keyY - 9, Math.round(34 * uiScale), 18, 4);
+      ctx.fill();
+      ctx.font = `700 ${Math.round(10 * uiScale)}px "JetBrains Mono", monospace`;
+      ctx.fillStyle = '#07090d';
+      ctx.textAlign = 'center';
+      ctx.fillText(levelName, boxX + 6 + Math.round(17 * uiScale), keyY + 3.5);
+
+      const neckY = normToY(neckNorm);
+      ctx.save();
+      ctx.setLineDash([4, 3]);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(innerLeft, neckY);
+      ctx.lineTo(innerRight, neckY);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.font = `700 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+      ctx.fillStyle = '#fde047';
+      ctx.textAlign = 'right';
+      ctx.fillText('颈线突破位', innerRight - 2, neckY - 4);
+
+      const showCount = Math.min(candles5s.length, microVisibleCount);
+      const stepW = innerW / candles5s.length;
+      const cw = Math.max(4, stepW * 0.62);
+
+      for (let k = 0; k < showCount; k++) {
+        const c = candles5s[k];
+        const cx = innerLeft + (k + 0.5) * stepW;
+        const isUp = c.c >= c.o;
+        const col = isUp ? '#00e676' : '#ff5252';
+
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, normToY(c.h));
+        ctx.lineTo(cx, normToY(c.l));
+        ctx.stroke();
+
+        const top = Math.min(normToY(c.o), normToY(c.c));
+        const h = Math.max(2, Math.abs(normToY(c.c) - normToY(c.o)));
+        ctx.fillStyle = col;
+        ctx.fillRect(cx - cw / 2, top, cw, h);
+      }
+
+      if (microPattern === 'DB' && showCount >= 9) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0, 230, 118, 0.85)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(innerLeft + 0.5 * stepW, normToY(0.72));
+        ctx.lineTo(innerLeft + 2.5 * stepW, normToY(0.18));
+        ctx.lineTo(innerLeft + 5.5 * stepW, normToY(0.70));
+        ctx.lineTo(innerLeft + 7.5 * stepW, normToY(0.20));
+        if (showCount >= 11) {
+          ctx.lineTo(innerLeft + 10.5 * stepW, normToY(0.75));
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.font = `600 ${Math.round(10 * uiScale)}px Inter, sans-serif`;
+      ctx.fillStyle = '#8b9bb4';
+      ctx.textAlign = 'left';
+      const footText = microPattern === '2B'
+        ? '①影线穿刺猎杀 → ③回测关键位不破 → ④破颈线入场'
+        : '①②双底实体均穿透关键位下方 → 放量突破上方W颈线';
+      ctx.fillText(footText, boxX + 10, boxY + boxH - 9);
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 5. 交互控制器、子弹时间播放引擎与事件绑定
+    // =========================================================================
+    function setEntry(entry) {
+      currentEntry = entry;
+      const btn1 = document.getElementById('btn-entry-1');
+      const btn2 = document.getElementById('btn-entry-2');
+      const btnPmhInv = document.getElementById('btn-exit-PMH_INV');
+
+      const activeCls = 'px-2.5 py-1 rounded text-xs font-semibold transition-all bg-[#00e676]/15 text-[#00e676] border border-[#00e676]/45';
+      const normalCls = 'px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white';
+
+      btn1.className = entry === '1' ? activeCls : normalCls;
+      btn2.className = entry === '2' ? activeCls : normalCls;
+
+      if (entry === '2') {
+        btnPmhInv.classList.remove('hidden');
+      } else {
+        btnPmhInv.classList.add('hidden');
+        if (currentExit === 'PMH_INV') currentExit = 'A';
+      }
+      setExit(currentExit);
+    }
+
+    function setExit(exit) {
+      currentExit = exit;
+      ['PMH_INV', 'A', 'B', 'C'].forEach(key => {
+        const el = document.getElementById(`btn-exit-${key}`);
+        if (!el) return;
+        const isAct = key === exit;
+        el.className = isAct
+          ? 'px-2.5 py-1 rounded text-xs font-semibold transition-all bg-amber-400/15 text-amber-300 border border-amber-400/45'
+          : 'px-2.5 py-1 rounded text-xs font-semibold transition-all text-[#8b9bb4] hover:text-white';
+      });
+
+      dataset = buildMarketDataset(currentEntry, currentExit);
+      updateBanner();
+      updateHud();
+      drawAll();
+    }
+
+    function updateBanner() {
+      const info = BRANCH_INFO[`${currentEntry}_${currentExit}`] || BRANCH_INFO['1_A'];
+      document.getElementById('banner-tag').textContent = info.tag;
+      document.getElementById('banner-title').textContent = info.title;
+      document.getElementById('banner-desc').textContent = info.desc;
+    }
+
+    function updateHud() {
+      const idx = Math.max(0, Math.min(TOTAL_BARS - 1, visibleBarsCount - 1));
+      const b = dataset.bars[idx];
+      document.getElementById('hud-price').textContent = b.close.toFixed(2);
+      document.getElementById('hud-time').textContent = b.time;
+      document.getElementById('slider-time-curr').textContent = b.time;
+      document.getElementById('time-slider').value = visibleBarsCount;
+    }
+
+    function toggleLayer(name, checked) {
+      layerState[name] = checked;
+      drawAll();
+    }
+
+    function toggleExtra(name, checked) {
+      layerState[name] = checked;
+      drawAll();
+    }
+
+    function togglePopover(id) {
+      const target = document.getElementById(id);
+      ['popover-layers', 'popover-levels', 'popover-library'].forEach(pid => {
+        if (pid !== id) document.getElementById(pid).classList.add('hidden');
+      });
+      target.classList.toggle('hidden');
+    }
+
+    function onSliderInput(val) {
+      stopPlay();
+      visibleBarsCount = parseInt(val, 10);
+      microVisibleCount = 14;
+      updateHud();
+      drawAll();
+    }
+
+    function jumpToCatalyst() {
+      stopPlay();
+      visibleBarsCount = 10;
+      updateHud();
+      drawAll();
+    }
+
+    function jumpToOpen() {
+      stopPlay();
+      visibleBarsCount = PRE_BARS + 1;
+      updateHud();
+      drawAll();
+    }
+
+    function resetTimeline() {
+      stopPlay();
+      visibleBarsCount = TOTAL_BARS;
+      microVisibleCount = 14;
+      bulletTimeTriggeredOnce = false;
+      updateHud();
+      drawAll();
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        stopPlay();
+      } else {
+        startPlay();
+      }
+    }
+
+    function startPlay() {
+      if (visibleBarsCount >= TOTAL_BARS) {
+        visibleBarsCount = 1;
+        bulletTimeTriggeredOnce = false;
+      }
+      isPlaying = true;
+      document.getElementById('play-icon').textContent = '⏸';
+      document.getElementById('play-text').textContent = '暂停';
+
+      playTimer = setInterval(() => {
+        if (bulletTimeActive) return;
+
+        if (layerState.micro5s && visibleBarsCount === dataset.resonanceBarIdx + 1 && !bulletTimeTriggeredOnce) {
+          bulletTimeTriggeredOnce = true;
+          runMicro5sAnimation(true);
+          return;
+        }
+
+        if (visibleBarsCount < TOTAL_BARS) {
+          visibleBarsCount++;
+          updateHud();
+          drawAll();
+        } else {
+          stopPlay();
+        }
+      }, 110);
+    }
+
+    function stopPlay() {
+      isPlaying = false;
+      bulletTimeActive = false;
+      if (playTimer) clearInterval(playTimer);
+      if (microAnimTimer) clearInterval(microAnimTimer);
+      document.getElementById('play-icon').textContent = '▶';
+      document.getElementById('play-text').textContent = '推演播放';
+    }
+
+    function runMicro5sAnimation(resumeAfter) {
+      if (microAnimTimer) clearInterval(microAnimTimer);
+      bulletTimeActive = true;
+      microVisibleCount = 1;
+      drawAll();
+
+      microAnimTimer = setInterval(() => {
+        if (microVisibleCount < 14) {
+          microVisibleCount++;
+          drawAll();
+        } else {
+          clearInterval(microAnimTimer);
+          setTimeout(() => {
+            bulletTimeActive = false;
+            drawAll();
+          }, 550);
+        }
+      }, 160);
+    }
+
+    function handlePointerMove(clientX, clientY) {
+      if (!layoutMetrics) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const { padLeft, splitX, padTop, mainBottom, chartWidth } = layoutMetrics;
+
+      if (x >= padLeft && x <= splitX && y >= padTop && y <= mainBottom) {
+        mousePos = { x, y, inside: true };
+        const idx = Math.floor(((x - padLeft) / chartWidth) * TOTAL_BARS);
+        hoverBarIndex = Math.max(0, Math.min(visibleBarsCount - 1, idx));
+      } else {
+        mousePos.inside = false;
+        hoverBarIndex = -1;
+      }
+      drawAll();
+    }
+
+    function handlePointerClick(clientX, clientY) {
+      if (!microBtnRects) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      const hit = (r) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+      if (hit(microBtnRects.play)) {
+        runMicro5sAnimation(false);
+      } else if (hit(microBtnRects.b2b)) {
+        microPattern = '2B';
+        microVisibleCount = 14;
+        drawAll();
+      } else if (hit(microBtnRects.db)) {
+        microPattern = 'DB';
+        microVisibleCount = 14;
+        drawAll();
+      }
+    }
+
+    canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+    canvas.addEventListener('mouseleave', () => {
+      mousePos.inside = false;
+      hoverBarIndex = -1;
+      drawAll();
+    });
+    canvas.addEventListener('click', (e) => handlePointerClick(e.clientX, e.clientY));
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        handlePointerClick(t.clientX, t.clientY);
+        handlePointerMove(t.clientX, t.clientY);
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        const t = e.touches[0];
+        handlePointerMove(t.clientX, t.clientY);
+      }
+    }, { passive: true });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(() => resizeCanvas());
+      resizeObserver.observe(container);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function initApp() {
+      resizeCanvas();
+      setEntry('1');
+      requestAnimationFrame(() => resizeCanvas());
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+  <!-- ===== 夜间巡航 · 背景音乐悬浮控件 ===== -->
+  <div id="musicDock" style="position:fixed;right:16px;bottom:16px;z-index:9999;font-family:'JetBrains Mono',monospace;">
+    <div id="musicPanel" style="display:none;width:360px;max-width:calc(100vw - 32px);background:rgba(12,16,23,0.96);backdrop-filter:blur(14px);border:1px solid rgba(0,229,255,0.28);border-radius:12px;box-shadow:0 20px 45px -15px rgba(0,0,0,0.9),0 0 22px -10px rgba(0,229,255,0.35);overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid rgba(255,255,255,0.07);">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;color:#00e5ff;">&#9835; NIGHT DRIVE</span>
+          <span style="font-size:10px;color:#526075;">夜间巡航 &middot; 窦虹兔</span>
+        </div>
+        <button type="button" onclick="musicTogglePanel()" title="收起" style="background:none;border:none;color:#526075;font-size:16px;cursor:pointer;line-height:1;padding:2px 4px;">&#10005;</button>
+      </div>
+      <div style="padding:12px;background:#07090d;">
+        <div id="musicFrameBox" style="display:flex;justify-content:center;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          <span id="musicHint" style="font-size:10px;color:#526075;">点击播放键开始巡航 &#9654;</span>
+          <button type="button" onclick="musicStop()" style="background:rgba(255,82,82,0.08);border:1px solid rgba(255,82,82,0.3);color:#ff5252;font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;">停止音乐</button>
+        </div>
+      </div>
+    </div>
+    <button type="button" id="musicFab" onclick="musicTogglePanel()" title="夜间巡航 · 背景音乐" style="display:flex;align-items:center;gap:8px;margin-left:auto;padding:9px 13px;background:rgba(12,16,23,0.94);backdrop-filter:blur(10px);border:1px solid rgba(0,229,255,0.35);border-radius:999px;color:#00e5ff;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px -8px rgba(0,0,0,0.85),0 0 14px -6px rgba(0,229,255,0.5);transition:transform 0.2s ease,border-color 0.2s ease;">
+      <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
+        <span style="width:7px;height:7px;border-radius:50%;background:#00e676;box-shadow:0 0 8px #00e676;"></span>
+      </span>
+      <span>&#9835; 夜间巡航</span>
+    </button>
+  </div>
+  <script>
+  (function(){
+    var panel=document.getElementById('musicPanel');
+    var fab=document.getElementById('musicFab');
+    var box=document.getElementById('musicFrameBox');
+    var hint=document.getElementById('musicHint');
+    var created=false;
+    function createFrame(){
+      if(created) return;
+      var f=document.createElement('iframe');
+      f.setAttribute('frameborder','no'); f.setAttribute('border','0');
+      f.setAttribute('marginwidth','0'); f.setAttribute('marginheight','0');
+      f.setAttribute('scrolling','no');
+      f.width='330'; f.height='86';
+      f.style.width='100%'; f.style.maxWidth='330px'; f.style.height='86px';
+      // 用户提供的网易云外链播放器；auto=0 避免浏览器自动播放被拦，改由用户点播放键
+      f.src='https://music.163.com/outchain/player?type=2&id=3439481094&auto=0&height=66';
+      box.appendChild(f); created=true;
+      hint.textContent='如需自动播放，点播放器上的播放键 &#9654;';
+    }
+    window.musicTogglePanel=function(){
+      var open=panel.style.display==='none';
+      panel.style.display=open?'block':'none';
+      fab.style.display=open?'none':'flex';
+      if(open) createFrame();
+    };
+    window.musicStop=function(){
+      while(box.firstChild) box.removeChild(box.firstChild);
+      created=false; hint.textContent='音乐已停止 &middot; 点播放键重新载入';
+    };
+  })();
+  </script>
+
+</body>
+</html>
